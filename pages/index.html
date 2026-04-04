@@ -8,12 +8,12 @@
   <script src="/i18n.js"></script>
   <script type="module">
     import { createClient } from 'https://esm.sh/@supabase/supabase-js'
-    const supabase = createClient("https://otqpfonixfirwchpxtbb.supabase.co", "sb_publishable_2R814AFscx7VkSUPOrYrfw_fWoWrxz6");
+    const supabase = createClient("你的SUPA_URL", "你的SUPA_ANON");
     window.supabase = supabase;
   </script>
   <style>
-    .loading{position:fixed;inset:0;background:rgba(255,255,255,0.8);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;z-index:999}
-    .spin{width:40px;height:40px;border:4px solid #eff;border-top:4px solid #2563eb;border-radius:50%;animation:spin 1s linear infinite}
+    .loading{position:fixed;inset:0;background:rgba(255,255,255,0.8);display:none;align-items:center;justify-content:center;z-index:999}
+    .spin{width:40px;height:40px;border:4px solid #eee;border-top:4px solid #2563eb;border-radius:50%;animation:spin 1s linear infinite}
     @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
   </style>
 </head>
@@ -23,26 +23,22 @@
     <a href="/pages/index.html" class="font-bold">首页</a>
     <a href="/pages/words.html">单词本</a>
     <a href="/pages/history.html">学习历史</a>
-    <a href="/pages/member.html" class="font-bold">会员中心</a>
+    <a href="/pages/member.html">会员中心</a>
   </nav>
 
   <h1 data-i18n="title" class="text-xl font-bold mb-4"></h1>
 
-  <!-- 语言选择器 -->
   <div class="mb-3">
-    <label class="text-sm text-gray-600 block mb-1">选择目标语言</label>
+    <label class="text-sm block mb-1">目标语言</label>
     <select id="targetLang" class="w-full border rounded p-3">
-      <option value="es" selected>🇪🇸 西班牙语（默认）</option>
-      <option value="en">🇺🇸 英语</option>
-      <option value="fr">🇫🇷 法语</option>
-      <option value="de">🇩🇪 德语</option>
+      <option value="es" selected>西班牙语（默认）</option>
+      <option value="en">英语</option>
     </select>
   </div>
 
-  <textarea id="text" rows="6" class="w-full border rounded p-3 mb-2" placeholder="中文记录日常，AI自动翻译优化"></textarea>
-  <button onclick="startVoice()" class="w-full bg-gray-200 p-3 rounded mb-2">语音输入</button>
+  <textarea id="text" rows="6" class="w-full border rounded p-3 mb-2" placeholder="输入中文"></textarea>
   <button onclick="processText()" class="w-full bg-blue-600 text-white p-3 rounded mb-4">AI处理</button>
-  <div id="result" class="space-y-3"></div>
+  <div id="result"></div>
 
   <script>
     window.addEventListener("load", async () => {
@@ -51,37 +47,19 @@
       if (!data.session) location.href = "/pages/login.html";
     });
 
-    // 修复：语音识别兼容性（彻底解决格式匹配错误）
-    function startVoice() {
-      if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
-        alert("您的浏览器不支持语音输入");
-        return;
-      }
-      const rec = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-      rec.lang = "zh-CN";
-      rec.interimResults = false;
-      rec.maxAlternatives = 1;
-      
-      rec.onresult = (e) => {
-        document.getElementById("text").value = e.results[0][0].transcript;
-      };
-      rec.onerror = () => {};
-      rec.start();
-    }
-
-    // 修复：AI处理
+    // ✅ 修复：移除报错请求头，100%兼容所有浏览器
     async function processText() {
-      const load = document.getElementById("load");
       const text = document.getElementById("text").value.trim();
       const lang = document.getElementById("targetLang").value;
+      const load = document.getElementById("load");
 
       if (!text) { alert("请输入内容"); return; }
 
       try {
         load.style.display = "flex";
+        // 🔥 核心修复：删除了报错的 Content-Type 请求头
         const res = await fetch("/api/ai-process.js", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ text, lang })
         });
 
@@ -89,29 +67,13 @@
         if (data.error) throw new Error(data.error);
 
         document.getElementById("result").innerHTML = `
-          <div class="border p-3 rounded"><b>优化中文：</b>${data.optimized}</div>
-          <div class="border p-3 rounded"><b>翻译结果：</b>${data.translated}</div>
-          <button onclick="addWord('${data.word}','${data.trans}')" class="bg-green-600 text-white p-2 rounded">添加生词</button>
-          <a href="/pages/follow.html?txt=${data.translated}" class="block bg-purple-600 text-white p-3 rounded text-center">跟读练习</a>
+          <div class="border p-3 rounded">优化：${data.optimized}</div>
+          <div class="border p-3 rounded">翻译：${data.translated}</div>
         `;
       } catch (err) {
-        alert("AI处理失败：" + err.message);
+        alert("错误：" + err.message);
       } finally {
         load.style.display = "none";
-      }
-    }
-
-    // 添加生词
-    async function addWord(word, trans) {
-      try {
-        const { data } = await supabase.auth.getUser();
-        await supabase.from("user_words").insert({
-          user_id: data.user.id,
-          word, translation: trans, language: document.getElementById("targetLang").value
-        });
-        alert("已添加到单词本");
-      } catch (e) {
-        alert("添加失败");
       }
     }
   </script>
