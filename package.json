@@ -1,5 +1,7 @@
 {
-  "type": "module",
-  "name": "lang-learning-pwa",
-  "version": "1.0.0"
+  "name": "language-learning",
+  "version": "1.0.0",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.40.0"
+  }
 }
