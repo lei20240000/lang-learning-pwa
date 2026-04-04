@@ -8,7 +8,11 @@
   <script src="/i18n.js"></script>
   <script type="module">
     import { createClient } from 'https://esm.sh/@supabase/supabase-js'
-    const supabase = createClient("https://otqpfonixfirwchpxtbb.supabase.co", "sb_publishable_2R814AFscx7VkSUPOrYrfw_fWoWrxz6");
+    // 替换成你自己的 SUPABASE_URL 和 ANON_KEY
+    const supabase = createClient(
+      "你的Project URL",
+      "你的anon key"
+    );
     window.supabase = supabase;
   </script>
 </head>
@@ -17,23 +21,51 @@
     <h1 data-i18n="title" class="text-xl font-bold mb-5 text-center"></h1>
     <input id="email" type="email" class="w-full p-3 border rounded mb-3" placeholder="Email">
     <input id="pwd" type="password" class="w-full p-3 border rounded mb-4" placeholder="Password">
-    <button onclick="register()" class="w-full bg-blue-600 text-white p-3 rounded mb-2" data-i18n="register"></button>
-    <button onclick="login()" class="w-full border p-3 rounded" data-i18n="login"></button>
+    <button onclick="register()" class="w-full bg-blue-600 text-white p-3 rounded mb-2" data-i18n="register">注册</button>
+    <button onclick="login()" class="w-full border p-3 rounded" data-i18n="login">登录</button>
   </div>
 
   <script>
     window.addEventListener("load", initI18n);
+
+    // 纯邮箱密码注册（无匿名，彻底修复报错）
     async function register() {
       const email = document.getElementById("email").value;
-      const pwd = document.getElementById("pwd").value;
-      const { error } = await supabase.auth.signUp({ email, password: pwd });
-      alert(error ? error.message : "注册成功，请查收邮箱验证");
+      const password = document.getElementById("pwd").value;
+
+      if (!email || !password) {
+        alert("请输入邮箱和密码");
+        return;
+      }
+
+      // 官方标准注册，无匿名逻辑
+      const { data, error } = await supabase.auth.signUp({
+        email: email,
+        password: password
+      });
+
+      if (error) {
+        alert("注册失败：" + error.message);
+      } else {
+        alert("注册成功！请查收邮箱验证链接，验证后登录");
+      }
     }
+
+    // 登录逻辑
     async function login() {
       const email = document.getElementById("email").value;
-      const pwd = document.getElementById("pwd").value;
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password: pwd });
-      if (error) { alert(error.message); return; }
+      const password = document.getElementById("pwd").value;
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email,
+        password: password
+      });
+
+      if (error) {
+        alert("登录失败：" + error.message);
+        return;
+      }
+
       localStorage.setItem("user_id", data.user.id);
       location.href = "index.html";
     }
