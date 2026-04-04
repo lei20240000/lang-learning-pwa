@@ -5,8 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Learning History</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/i18n.js"></script>
   <script type="module">
     import { createClient } from 'https://esm.sh/@supabase/supabase-js'
+    // 替换成你自己的真实URL和anon key（你已经改好了，直接保留）
     const supabase = createClient("https://otqpfonixfirwchpxtbb.supabase.co", "sb_publishable_2R814AFscx7VkSUPOrYrfw_fWoWrxz6");
     window.supabase = supabase;
   </script>
@@ -16,16 +18,28 @@
   <div id="list" class="space-y-3"></div>
 
   <script>
+    // 补全登录状态校验，未登录自动跳转到登录页
+    window.addEventListener("load", async () => {
+      initI18n();
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) {
+        location.href = "login.html";
+        return;
+      }
+      loadHistory();
+    });
+
     async function loadHistory() {
-      const { data } = await supabase.from("learning_history").select("*").eq("user_id", localStorage.user_id);
+      const userId = localStorage.getItem("user_id");
+      const { data } = await supabase.from("learning_history").select("*").eq("user_id", userId);
       document.getElementById("list").innerHTML = data.map(h => `
-        <div class="border p-3 rounded">
+        <div class="border p-3 rounded bg-white shadow-sm">
           <b>原文：</b>${h.original}<br>
-          <b>优化：</b>${h.optimized}
+          <b>优化后：</b>${h.optimized}<br>
+          <b>西语翻译：</b>${h.translated}
         </div>
       `).join("");
     }
-    loadHistory();
   </script>
 </body>
 </html>
