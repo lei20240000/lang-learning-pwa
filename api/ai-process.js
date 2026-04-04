@@ -1,20 +1,17 @@
 import { createClient } from '@supabase/supabase-js';
 
 export default async function handler(req, res) {
-  // 统一设置响应头
   res.setHeader('Content-Type', 'application/json');
 
   try {
-    // 1. 解析请求参数
     const { text, lang } = await req.json();
-    if (!text || !lang) throw new Error('参数缺失');
+    if (!text || !lang) throw new Error('请输入内容');
 
-    // 2. 获取当前登录用户
     const supabase = createClient(process.env.SUPA_URL, process.env.SUPA_SERVICE);
-    const { data: { user }, error: userErr } = await supabase.auth.getUser();
-    if (userErr || !user) throw new Error('请先登录');
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('请先登录');
 
-    // 3. AI翻译优化（通义千问官方兼容接口）
+    // AI 请求（强制返回纯JSON）
     const aiRes = await fetch('https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -25,31 +22,29 @@ export default async function handler(req, res) {
         model: 'qwen3.5-flash',
         messages: [{
           role: 'system',
-          content: `优化中文句子，翻译成${lang}语言，提取1个核心单词，严格返回JSON格式：{"optimized":"优化后的中文","translated":"翻译结果","word":"核心词","trans":"单词翻译"}`
+          content: `你是翻译助手，优化中文句子，翻译成${lang}，提取核心词。只返回JSON，无其他文字：{"optimized":"","translated":"","word":"","trans":""}`
         }, { role: 'user', content: text }]
       })
     });
 
     const aiData = await aiRes.json();
-    if (!aiData.choices) throw new Error('AI服务异常');
+    const content = aiData.choices[0].message.content;
+    
+    // 🔥 终极修复：正则自动提取JSON字符串，兼容所有格式
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('AI返回格式错误');
+    
+    const result = JSON.parse(jsonMatch[0]);
 
-    // 4. 解析AI结果
-    const result = JSON.parse(aiData.choices[0].message.content.replace(/```json|```/g, ''));
-
-    // 5. 保存学习记录
+    // 保存记录
     await supabase.from('learning_history').insert({
-      user_id: user.id,
-      original: text,
-      optimized: result.optimized,
-      translated: result.translated,
-      target_lang: lang
+      user_id: user.id, original: text,
+      optimized: result.optimized, translated: result.translated, target_lang: lang
     });
 
-    // 6. 返回成功结果
     res.status(200).json(result);
 
   } catch (err) {
-    // 错误返回（解决加载转圈）
     res.status(400).json({ error: err.message });
   }
 }
