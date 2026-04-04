@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Follow Practice</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/i18n.js"></script>
+</head>
+<body class="bg-gray-50 p-4">
+  <nav class="mb-4"><a href="index.html" class="text-blue-600">← 返回首页</a></nav>
+  <div id="sentence" class="text-lg border p-4 rounded mb-4"></div>
+  <button onclick="shadowMode()" class="w-full bg-blue-600 text-white p-3 rounded mb-2" data-i18n="shadow"></button>
+  <button onclick="sceneMode()" class="w-full bg-purple-600 text-white p-3 rounded" data-i18n="scene"></button>
+
+  <script>
+    window.addEventListener("load", initI18n);
+    const txt = new URLSearchParams(location.search).get("txt");
+    document.getElementById("sentence").textContent = txt;
+    let count = 0;
+    function play() {
+      const u = new SpeechSynthesisUtterance(txt);
+      u.lang = "es-ES";
+      speechSynthesis.speak(u);
+    }
+    function shadowMode() {
+      play(); count++;
+      alert(count < 10 ? `第${count}遍跟读` : "完成10遍影子跟读！");
+    }
+    function sceneMode() {
+      play();
+      alert("情境挑战：模仿母语者语气朗读对话");
+    }
+  </script>
+</body>
+</html>
