@@ -1,1 +1,8 @@
-
+{
+  "name": "Language Learning",
+  "short_name": "LangLearn",
+  "start_url": "/pages/login.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb"
+}
