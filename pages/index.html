@@ -8,8 +8,7 @@
   <script src="/i18n.js"></script>
   <script type="module">
     import { createClient } from 'https://esm.sh/@supabase/supabase-js'
-    // 替换成你自己的密钥
-    const supabase = createClient("你的SUPA_URL", "你的SUPA_ANON");
+    const supabase = createClient("https://otqpfonixfirwchpxtbb.supabase.co", "sb_publishable_2R814AFscx7VkSUPOrYrfw_fWoWrxz6");
     window.supabase = supabase;
   </script>
   <style>
@@ -24,12 +23,12 @@
     <a href="/pages/index.html" class="font-bold">首页</a>
     <a href="/pages/words.html">单词本</a>
     <a href="/pages/history.html">学习历史</a>
-    <a href="/pages/member.html">会员中心</a>
+    <a href="/pages/member.html" class="font-bold">会员中心</a>
   </nav>
 
   <h1 data-i18n="title" class="text-xl font-bold mb-4"></h1>
 
-  <!-- ✅ 新增：目标语言选择器（默认西班牙语，可切换） -->
+  <!-- 语言选择器 -->
   <div class="mb-3">
     <label class="text-sm text-gray-600 block mb-1">选择目标语言</label>
     <select id="targetLang" class="w-full border rounded p-3">
@@ -41,8 +40,8 @@
   </div>
 
   <textarea id="text" rows="6" class="w-full border rounded p-3 mb-2" placeholder="中文记录日常，AI自动翻译优化"></textarea>
-  <button onclick="startVoice()" class="w-full bg-gray-200 p-3 rounded mb-2" data-i18n="voice">语音输入</button>
-  <button onclick="processText()" class="w-full bg-blue-600 text-white p-3 rounded mb-4" data-i18n="process">AI处理</button>
+  <button onclick="startVoice()" class="w-full bg-gray-200 p-3 rounded mb-2">语音输入</button>
+  <button onclick="processText()" class="w-full bg-blue-600 text-white p-3 rounded mb-4">AI处理</button>
   <div id="result" class="space-y-3"></div>
 
   <script>
@@ -52,25 +51,34 @@
       if (!data.session) location.href = "/pages/login.html";
     });
 
-    // 语音输入
+    // 修复：语音识别兼容性（彻底解决格式匹配错误）
     function startVoice() {
-      const rec = new (SpeechRecognition || webkitSpeechRecognition)();
+      if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
+        alert("您的浏览器不支持语音输入");
+        return;
+      }
+      const rec = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
       rec.lang = "zh-CN";
+      rec.interimResults = false;
+      rec.maxAlternatives = 1;
+      
+      rec.onresult = (e) => {
+        document.getElementById("text").value = e.results[0][0].transcript;
+      };
+      rec.onerror = () => {};
       rec.start();
-      rec.onresult = (e) => document.getElementById("text").value = e.results[0][0].transcript;
     }
 
-    // ✅ 修复：AI处理 + 异常捕获（解决一直转圈）
+    // 修复：AI处理
     async function processText() {
       const load = document.getElementById("load");
       const text = document.getElementById("text").value.trim();
-      const lang = document.getElementById("targetLang").value; // 获取选择的语言
-      const resultBox = document.getElementById("result");
+      const lang = document.getElementById("targetLang").value;
 
       if (!text) { alert("请输入内容"); return; }
 
       try {
-        load.style.display = "flex"; // 开启加载
+        load.style.display = "flex";
         const res = await fetch("/api/ai-process.js", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -80,8 +88,7 @@
         const data = await res.json();
         if (data.error) throw new Error(data.error);
 
-        // 渲染结果
-        resultBox.innerHTML = `
+        document.getElementById("result").innerHTML = `
           <div class="border p-3 rounded"><b>优化中文：</b>${data.optimized}</div>
           <div class="border p-3 rounded"><b>翻译结果：</b>${data.translated}</div>
           <button onclick="addWord('${data.word}','${data.trans}')" class="bg-green-600 text-white p-2 rounded">添加生词</button>
@@ -90,17 +97,22 @@
       } catch (err) {
         alert("AI处理失败：" + err.message);
       } finally {
-        load.style.display = "none"; // ✅ 强制关闭加载（解决转圈）
+        load.style.display = "none";
       }
     }
 
     // 添加生词
     async function addWord(word, trans) {
-      await supabase.from("user_words").insert({
-        user_id: (await supabase.auth.getUser()).data.user.id,
-        word, translation: trans, language: document.getElementById("targetLang").value
-      });
-      alert("已添加到单词本");
+      try {
+        const { data } = await supabase.auth.getUser();
+        await supabase.from("user_words").insert({
+          user_id: data.user.id,
+          word, translation: trans, language: document.getElementById("targetLang").value
+        });
+        alert("已添加到单词本");
+      } catch (e) {
+        alert("添加失败");
+      }
     }
   </script>
 </body>
