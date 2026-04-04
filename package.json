@@ -1,1 +1,5 @@
-
+{
+  "type": "module",
+  "name": "lang-learning-pwa",
+  "version": "1.0.0"
+}
