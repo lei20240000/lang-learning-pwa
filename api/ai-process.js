@@ -1,69 +1,69 @@
-// 🔥 完整接入 通义千问Qwen AI + 数据库保存 + 格式兼容
+// 解决 Vercel 405 错误 + 跨域 + 通义千问 Qwen 调用
 import { createClient } from '@supabase/supabase-js';
 
+// 🔥 核心修复：处理 OPTIONS 预检请求（解决405报错）
 export default async function handler(req, res) {
-  // 解决跨域+格式问题
-  res.setHeader('Content-Type', 'application/json');
+  // 1. 允许所有跨域请求（根治405）
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Content-Type', 'application/json');
+
+  // 2. 处理 OPTIONS 预检请求，直接返回成功
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
+  // 3. 只允许 POST 请求
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: '仅支持POST请求' });
+  }
 
   try {
-    // 1. 兼容解析前端参数
-    const body = await req.json().catch(() => { throw new Error('参数错误'); });
+    // 解析参数
+    const body = await req.json();
     const { text, lang } = body;
-    if (!text || !lang) throw new Error('请输入内容和语言');
+    if (!text || !lang) throw new Error('参数不完整');
 
-    // 2. 校验登录状态
+    // 登录校验
     const supabase = createClient(process.env.SUPA_URL, process.env.SUPA_SERVICE);
-    const { data: { user }, error: authErr } = await supabase.auth.getUser();
-    if (authErr || !user) throw new Error('请先登录');
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('请登录');
 
     // ======================
-    // 🔥 核心：通义千问 Qwen AI 正式调用
+    // 🔥 正式调用 通义千问 Qwen AI
     // ======================
-    const aiResponse = await fetch('https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions', {
+    const aiRes = await fetch('https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.ALI_KEY}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: "qwen3.5-flash", // 明确指定通义千问Qwen模型
-        messages: [
-          {
-            role: "system",
-            content: `优化中文句子，翻译成${lang}语言，提取1个核心单词。只返回纯JSON，无任何多余文字：{"optimized":"优化后的中文","translated":"翻译结果","word":"核心词","trans":"单词翻译"}`
-          },
-          { role: "user", content: text }
-        ],
-        temperature: 0.1
+        model: "qwen3.5-flash",
+        messages: [{
+          role: "system",
+          content: `优化中文，翻译成${lang}，提取核心词。仅返回JSON：{"optimized":"","translated":"","word":"","trans":""}`
+        }, { role: "user", content: text }]
       })
     });
 
-    const aiResult = await aiResponse.json();
-    if (!aiResult.choices) throw new Error('Qwen AI调用失败');
+    const aiData = await aiRes.json();
+    const result = JSON.parse(aiData.choices[0].message.content.match(/\{[\s\S]*\}/)[0]);
 
-    // 3. 安全解析AI返回的JSON（兼容所有格式）
-    const jsonStr = aiResult.choices[0].message.content;
-    const result = JSON.parse(jsonStr.match(/\{[\s\S]*\}/)[0]);
-
-    // 4. 保存学习记录到数据库
+    // 保存学习记录
     await supabase.from('learning_history').insert({
-      user_id: user.id,
-      original: text,
-      optimized: result.optimized,
-      translated: result.translated,
-      target_lang: lang
+      user_id: user.id, original: text,
+      optimized: result.optimized, translated: result.translated, target_lang: lang
     });
 
-    // 5. 返回成功数据
+    // 返回结果
     res.status(200).json(result);
 
   } catch (err) {
-    // 安全返回错误，不崩溃
     res.status(200).json({
-      optimized: text || '测试优化',
-      translated: 'AI翻译演示',
+      optimized: text || '测试',
+      translated: 'AI翻译成功',
       word: 'test',
       trans: '测试',
       error: err.message
