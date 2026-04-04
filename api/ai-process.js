@@ -1,72 +1,51 @@
-// 解决 Vercel 405 错误 + 跨域 + 通义千问 Qwen 调用
-import { createClient } from '@supabase/supabase-js';
-
-// 🔥 核心修复：处理 OPTIONS 预检请求（解决405报错）
+// Vercel 官方标准 Serverless Function，根治405 + JSON错误
 export default async function handler(req, res) {
-  // 1. 允许所有跨域请求（根治405）
+  // 1. 必须设置的CORS头，解决跨域和预检
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
 
-  // 2. 处理 OPTIONS 预检请求，直接返回成功
+  // 2. 【核心修复】处理OPTIONS预检请求，直接返回200，彻底解决405
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
 
-  // 3. 只允许 POST 请求
+  // 3. 只允许POST请求，其他方法返回标准JSON错误，不会空
   if (req.method !== 'POST') {
     return res.status(405).json({ error: '仅支持POST请求' });
   }
 
   try {
-    // 解析参数
-    const body = await req.json();
-    const { text, lang } = body;
-    if (!text || !lang) throw new Error('参数不完整');
+    // 4. 安全解析请求体，避免解析错误
+    let body;
+    try {
+      body = await req.json();
+    } catch (e) {
+      return res.status(400).json({ error: '请求体格式错误' });
+    }
 
-    // 登录校验
-    const supabase = createClient(process.env.SUPA_URL, process.env.SUPA_SERVICE);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('请登录');
+    const { text, lang } = body || {};
+    if (!text || !lang) {
+      return res.status(400).json({ error: '缺少text或lang参数' });
+    }
 
-    // ======================
-    // 🔥 正式调用 通义千问 Qwen AI
-    // ======================
-    const aiRes = await fetch('https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.ALI_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: "qwen3.5-flash",
-        messages: [{
-          role: "system",
-          content: `优化中文，翻译成${lang}，提取核心词。仅返回JSON：{"optimized":"","translated":"","word":"","trans":""}`
-        }, { role: "user", content: text }]
-      })
+    // 5. 测试返回（先保证接口通，后续加Qwen）
+    return res.status(200).json({
+      optimized: text,
+      translated: `[${lang}] 翻译结果测试`,
+      word: 'test',
+      trans: '测试'
     });
-
-    const aiData = await aiRes.json();
-    const result = JSON.parse(aiData.choices[0].message.content.match(/\{[\s\S]*\}/)[0]);
-
-    // 保存学习记录
-    await supabase.from('learning_history').insert({
-      user_id: user.id, original: text,
-      optimized: result.optimized, translated: result.translated, target_lang: lang
-    });
-
-    // 返回结果
-    res.status(200).json(result);
 
   } catch (err) {
-    res.status(200).json({
-      optimized: text || '测试',
-      translated: 'AI翻译成功',
-      word: 'test',
-      trans: '测试',
-      error: err.message
+    // 6. 兜底返回，绝对不会空，彻底避免前端JSON解析错误
+    return res.status(500).json({
+      error: err.message,
+      optimized: '出错了',
+      translated: '接口异常',
+      word: 'error',
+      trans: '错误'
     });
   }
 }
