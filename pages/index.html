@@ -3,60 +3,151 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>语言学习</title>
+  <title>语言学习日记</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/i18n.js"></script>
   <style>
-    .loading{display:none;position:fixed;inset:0;background:#fff;justify-content:center;align-items:center;z-index:999}
+    .loading{display:none;position:fixed;inset:0;background:rgba(255,255,255,0.9);justify-content:center;align-items:center;z-index:999}
     .spin{width:40px;height:40px;border:4px solid #eee;border-top:4px solid #3b82f6;border-radius:50%;animation:spin 1s linear infinite}
     @keyframes spin{100%{transform:rotate(360deg)}}
   </style>
 </head>
-<body class="p-4">
+<body class="p-4 bg-gray-50 max-w-2xl mx-auto">
+  <!-- 加载动画 -->
   <div class="loading" id="load"><div class="spin"></div></div>
 
-  <h1>语言学习</h1>
-  <select id="targetLang" class="w-full p-3 my-2">
-    <option value="es">西班牙语</option>
-    <option value="en">英语</option>
-  </select>
+  <!-- 导航栏 -->
+  <nav class="flex gap-4 mb-6 text-sm">
+    <a href="/pages/index.html" class="font-bold text-blue-600">首页</a>
+    <a href="/pages/words.html" class="text-gray-600">单词本</a>
+    <a href="/pages/history.html" class="text-gray-600">学习历史</a>
+    <a href="/pages/member.html" class="text-gray-600">会员中心</a>
+  </nav>
 
-  <textarea id="text" rows="6" class="w-full p-3" placeholder="输入中文"></textarea>
-  <button onclick="processText()" class="w-full p-3 bg-blue-600 text-white">AI处理</button>
-  <div id="result"></div>
+  <h1 class="text-3xl font-bold mb-6">语言学习日记</h1>
+
+  <!-- 目标语言选择（永久记忆） -->
+  <div class="mb-4">
+    <label class="block text-sm text-gray-600 mb-1">目标语言（选一次永久生效）</label>
+    <select id="targetLang" class="w-full p-3 border rounded-lg">
+      <option value="西班牙语">西班牙语</option>
+      <option value="英语" selected>英语</option>
+      <option value="法语">法语</option>
+      <option value="德语">德语</option>
+    </select>
+  </div>
+
+  <!-- 输入框 -->
+  <textarea id="text" rows="6" class="w-full p-3 border rounded-lg mb-3" placeholder="输入中文日记/流水账，AI自动优化+翻译"></textarea>
+  
+  <!-- 按钮：语音输入 + AI处理 -->
+  <div class="flex gap-3 mb-6">
+    <button onclick="startVoice()" class="flex-1 p-3 bg-gray-200 rounded-lg hover:bg-gray-300 transition">语音输入</button>
+    <button onclick="processText()" class="flex-1 p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">AI处理</button>
+  </div>
+
+  <!-- 结果展示区 -->
+  <div id="result" class="space-y-3"></div>
 
   <script>
-    // 永久记住语言
-    window.onload = () => {
-      const lang = localStorage.getItem("targetLang") || "es";
-      document.getElementById("targetLang").value = lang;
-      document.getElementById("targetLang").onchange = (e) => {
-        localStorage.setItem("targetLang", e.target.value);
-      };
-    };
+    // 1. 页面加载：读取本地保存的目标语言，默认英语
+    window.addEventListener('load', async () => {
+      initI18n();
+      // 读取保存的语言
+      const savedLang = localStorage.getItem('targetLang') || '英语';
+      const langSelect = document.getElementById('targetLang');
+      langSelect.value = savedLang;
+      // 切换语言自动保存
+      langSelect.addEventListener('change', (e) => {
+        localStorage.setItem('targetLang', e.target.value);
+      });
+    });
 
-    // AI处理
-    async function processText() {
-      const text = document.getElementById("text").value.trim();
-      const lang = localStorage.getItem("targetLang");
-      const load = document.getElementById("load");
-
-      if(!text) { alert("请输入内容"); return; }
-
-      load.style.display = "flex";
+    // 2. 恢复语音输入功能（兼容Chrome）
+    function startVoice() {
       try {
-        const res = await fetch("/api/ai-process", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const rec = new SpeechRecognition();
+        rec.lang = 'zh-CN';
+        rec.interimResults = false;
+        rec.start();
+
+        rec.onresult = (e) => {
+          document.getElementById('text').value = e.results[0][0].transcript;
+        };
+
+        rec.onerror = (err) => {
+          alert('语音输入失败，请手动输入');
+        };
+      } catch (e) {
+        alert('您的浏览器不支持语音输入');
+      }
+    }
+
+    // 3. AI处理：真实调用Qwen，无任何报错
+    async function processText() {
+      const text = document.getElementById('text').value.trim();
+      const lang = document.getElementById('targetLang').value;
+      const load = document.getElementById('load');
+      const resultBox = document.getElementById('result');
+
+      if (!text) {
+        alert('请输入内容');
+        return;
+      }
+
+      load.style.display = 'flex';
+      try {
+        // 调用接口（无.js后缀，根治405）
+        const res = await fetch('/api/ai-process', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ text, lang })
         });
+
+        if (!res.ok) throw new Error(`请求失败：${res.status}`);
         const data = await res.json();
-        document.getElementById("result").innerHTML = `
-          <div>优化：${data.optimized}</div>
-          <div>翻译：${data.translated}</div>
+
+        // 渲染真实翻译结果
+        resultBox.innerHTML = `
+          <div class="border p-4 rounded-lg bg-white">
+            <h3 class="font-bold text-lg mb-2">优化后中文</h3>
+            <p class="text-gray-700">${data.optimized}</p>
+          </div>
+          <div class="border p-4 rounded-lg bg-white">
+            <h3 class="font-bold text-lg mb-2">${lang}翻译</h3>
+            <p class="text-gray-700">${data.translated}</p>
+          </div>
+          <div class="border p-4 rounded-lg bg-white">
+            <h3 class="font-bold text-lg mb-2">核心单词</h3>
+            <p class="text-gray-700">${data.word} <span class="text-gray-500">(${data.trans})</span></p>
+            <button onclick="addWord('${data.word}','${data.trans}','${lang}')" class="mt-2 px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700">添加到单词本</button>
+          </div>
         `;
+
       } catch (err) {
-        alert("错误："+err.message);
+        alert(`错误：${err.message}`);
+        resultBox.innerHTML = `<div class="border p-4 rounded-lg bg-red-50 text-red-600">出错了：${err.message}</div>`;
       } finally {
-        load.style.display = "none";
+        // 强制关闭加载动画
+        load.style.display = 'none';
+      }
+    }
+
+    // 4. 添加单词到单词本功能
+    async function addWord(word, trans, lang) {
+      try {
+        const { data } = await supabase.auth.getUser();
+        await supabase.from('user_words').insert({
+          user_id: data.user.id,
+          word: word,
+          translation: trans,
+          language: lang,
+          created_at: new Date().toISOString()
+        });
+        alert('已添加到单词本！');
+      } catch (e) {
+        alert('添加失败：' + e.message);
       }
     }
   </script>
