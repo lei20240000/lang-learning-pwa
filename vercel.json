@@ -1,10 +1,15 @@
 {
   "outputDirectory": ".",
   "buildCommand": "echo \"Build completed\"",
+  "rewrites": [
+    { "source": "/", "destination": "/pages/login.html" },
+    { "source": "/(.*)", "destination": "/pages/$1.html" }
+  ],
   "crons": [
     {
       "path": "/api/tiktok-generate.js",
-      "schedule": "0 9 * * *"
+      "schedule": "0 9 * * *",
+      "authorization": "Bearer ${CRON_SECRET}"
     }
   ]
 }
