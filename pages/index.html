@@ -63,7 +63,7 @@
       load.style.display = 'flex';
       try {
         // 标准fetch请求，带正确的Content-Type
-        const res = await fetch('/api/ai-process.js', {
+        const res = await fetch('/api/ai-process', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
