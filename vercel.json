@@ -8,8 +8,7 @@
   "crons": [
     {
       "path": "/api/tiktok-generate.js",
-      "schedule": "0 9 * * *",
-      "authorization": "Bearer ${CRON_SECRET}"
+      "schedule": "0 9 * * *"
     }
   ]
 }
