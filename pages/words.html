@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Word Book</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/i18n.js"></script>
+  <script type="module">
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js'
+    const supabase = createClient("https://otqpfonixfirwchpxtbb.supabase.co", "sb_publishable_2R814AFscx7VkSUPOrYrfw_fWoWrxz6");
+    window.supabase = supabase;
+  </script>
+</head>
+<body class="bg-gray-50 p-4">
+  <nav class="mb-4"><a href="index.html" class="text-blue-600">← 返回首页</a></nav>
+  <div class="flex gap-2 mb-4">
+    <button onclick="importWords()" class="bg-green-600 text-white p-2 rounded" data-i18n="import"></button>
+    <button onclick="reviewWords()" class="bg-blue-600 text-white p-2 rounded" data-i18n="review"></button>
+    <button onclick="dictationWords()" class="bg-purple-600 text-white p-2 rounded" data-i18n="dictation"></button>
+  </div>
+  <div id="wordList" class="space-y-2"></div>
+
+  <script>
+    window.addEventListener("load", initI18n);
+    async function loadWords() {
+      const { data } = await supabase.from("user_words").select("*").eq("user_id", localStorage.user_id);
+      document.getElementById("wordList").innerHTML = data.map(w => `
+        <div class="border p-3 rounded">${w.word} — ${w.translation}</div>
+      `).join("");
+    }
+    loadWords();
+    function importWords() {
+      const words = prompt("输入单词，用英文逗号分隔");
+      words.split(",").forEach(async w => {
+        await supabase.from("user_words").insert({ user_id: localStorage.user_id, word: w.trim(), language: "es" });
+      });
+      loadWords();
+    }
+    function reviewWords() {
+      alert("复习模式：随机展示单词，点击查看翻译");
+    }
+    function dictationWords() {
+      const u = new SpeechSynthesisUtterance("hello");
+      u.lang = "es-ES";
+      speechSynthesis.speak(u);
+      alert("听写模式：听完后拼写单词");
+    }
+  </script>
+</body>
+</html>
