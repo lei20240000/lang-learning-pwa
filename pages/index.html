@@ -10,12 +10,11 @@
     .spin{width:40px;height:40px;border:4px solid #eee;border-top:4px solid #3b82f6;border-radius:50%;animation:spin 1s linear infinite}
     @keyframes spin{100%{transform:rotate(360deg)}}
     .clickable-word {cursor: pointer;color: #3b82f6;font-weight:500}
-    .clickable-word:hover {text-decoration:underline}
+    .clickable-word:hover{text-decoration:underline}
     .page {display:none}
     .page.active {display:block}
     .nav-btn.active {font-weight:bold;color:#3b82f6;border-bottom:2px solid #3b82f6}
     .status-box {padding:12px 16px;border-radius:10px;margin-bottom:12px;font-weight:600}
-    .recording {background:#fef2f2;border-left:4px solid #ef4444;color:#dc2626}
     .shadow-status {background:#eff6ff;border-left:4px solid #3b82f6;color:#1e40af}
     .challenge-status {background:#faf5ff;border-left:4px solid #8b5cf6;color:#6d28d9}
     .play-btn,.record-btn,.stop-record-btn,.play-record-btn{padding:8px 16px;border-radius:8px;margin:4px;border:none;cursor:pointer}
@@ -24,15 +23,19 @@
     .stop-record-btn{background:#f59e0b;color:white}
     .play-record-btn{background:#10b981;color:white}
     .word-gap{color:#6b7280;font-weight:600}
+    .lang-select{display:flex;gap:8px;margin-left:auto}
   </style>
 </head>
 <body class="p-4 bg-gray-50 max-w-2xl mx-auto">
 <div class="loading" id="load"><div class="spin"></div></div>
 
-<!-- 顶部 -->
+<!-- 顶部：双语言选择（源语言+目标语言，主学中文） -->
 <div class="flex justify-between items-center mb-4">
   <h1 class="text-3xl font-bold text-blue-600">StreamLang</h1>
-  <select id="targetLang" class="p-2 border rounded-md text-sm bg-white"></select>
+  <div class="lang-select">
+    <select id="sourceLang" class="p-2 border rounded-md text-sm bg-white" title="My Language"></select>
+    <select id="targetLang" class="p-2 border rounded-md text-sm bg-white" title="Learning Language"></select>
+  </div>
 </div>
 
 <!-- 导航栏 -->
@@ -44,13 +47,12 @@
   <button class="nav-btn py-1" onclick="switchPage('tiktok')">🎬 TikTok</button>
 </div>
 
-<!-- Home 页（已删除语音输入功能） -->
+<!-- Home 页 -->
 <div id="home" class="page active">
-  <textarea id="text" rows="5" class="w-full p-4 border rounded-xl mb-4 text-xl" placeholder="输入中文..."></textarea>
+  <textarea id="text" rows="5" class="w-full p-4 border rounded-xl mb-4 text-xl" placeholder="输入文本..."></textarea>
   <div class="flex gap-3 mb-6">
     <button onclick="processText()" class="flex-1 p-4 bg-blue-600 text-white rounded-xl text-xl font-medium">🌍 Translate</button>
   </div>
-
   <div id="currentStatus" class="status-box hidden"></div>
   <div id="shadowPlayArea" class="hidden mb-4 flex flex-wrap gap-2"></div>
   <div id="result" class="space-y-4"></div>
@@ -74,16 +76,16 @@
   <div id="historyList" class="space-y-2 max-h-[500px] overflow-y-auto"></div>
 </div>
 
-<!-- 会员（已改为 Lemon Squeezy 配置） -->
+<!-- Pro会员页（添加支持邮箱） -->
 <div id="member" class="page">
   <div class="bg-gradient-to-r from-blue-500 to-purple-500 text-white p-6 rounded-lg mb-4 text-center">
     <h3 class="text-2xl font-bold">StreamLang Pro</h3>
     <p class="text-sm mt-1">7 Days Free Trial</p>
+    <p class="text-xs mt-2">Support: lei20240000@gmail.com</p>
   </div>
   <div class="border p-4 rounded-lg mb-2 bg-white"><p class="font-bold text-lg">Quarterly: $4.99</p></div>
   <div class="border p-4 rounded-lg mb-2 bg-white"><p class="font-bold text-lg">Yearly: $14.99</p></div>
   <div class="border p-4 rounded-lg mb-4 bg-white"><p class="font-bold text-lg">Lifetime: $29.99</p></div>
-  <!-- 替换为你的 Lemon Squeezy 支付链接即可 -->
   <a href="https://kingstream.lemonsqueezy.com/checkout/buy/54eec727-1c41-489d-854e-062134ece2a3" target="_blank" class="block w-full p-3 bg-blue-600 text-white rounded-lg text-center text-lg">Lemon Squeezy</a>
 </div>
 
@@ -100,8 +102,8 @@
   const sysLang = navigator.language.startsWith('zh') ? 'zh' : 'en';
   const I18N = {
     zh: {
-      home:"首页",vocab:"单词本",history:"学习历史",member:"会员",tiktok:"TikTok",
-      placeholder:"输入中文...",translate:"翻译",read:"朗读",shadow:"影子跟读",challenge:"情境挑战",
+      home:"首页",vocab:"单词本",history:"学习历史",member:"Pro",tiktok:"TikTok",
+      placeholder:"输入文本...",translate:"翻译",read:"朗读",shadow:"影子跟读",challenge:"情境挑战",
       import:"导入",review:"复习",dictate:"听写",save:"保存",
       shadowStep:"跟读第{n}/10遍 · {rate}倍速",play:"播放原音",record:"录音",stopRecord:"停止录音",playRecord:"播放录音",
       challenge1:"0.8倍速 × 2遍",challenge2:"1.0倍速 × 2遍",challenge3:"1.0倍速 · 单词空缺",
@@ -109,7 +111,7 @@
     },
     en: {
       home:"Home",vocab:"Vocab",history:"History",member:"Pro",tiktok:"TikTok",
-      placeholder:"Type Chinese...",translate:"Translate",read:"Read",shadow:"Shadow",challenge:"Scene Challenge",
+      placeholder:"Type text...",translate:"Translate",read:"Read",shadow:"Shadow",challenge:"Scene Challenge",
       import:"Import",review:"Review",dictate:"Dictation",save:"Save",
       shadowStep:"Shadow {n}/10 · {rate}x",play:"Play",record:"Record",stopRecord:"Stop Record",playRecord:"Play Record",
       challenge1:"0.8x × 2 times",challenge2:"1.0x × 2 times",challenge3:"1.0x · Word Gap",
@@ -118,46 +120,46 @@
   };
   const txt = I18N[sysLang];
 
+  // 全语言列表（主学中文，支持互译）
   const LANGUAGES = [
-    {code:"en",name:"English"},{code:"es",name:"Spanish"},{code:"fr",name:"French"},{code:"de",name:"German"},
-    {code:"ja",name:"Japanese"},{code:"ko",name:"Korean"},{code:"ru",name:"Russian"},{code:"pt",name:"Portuguese"},
-    {code:"it",name:"Italian"},{code:"ar",name:"Arabic"},{code:"hi",name:"Hindi"},{code:"tr",name:"Turkish"},
-    {code:"nl",name:"Dutch"},{code:"sv",name:"Swedish"},{code:"fi",name:"Finnish"},{code:"no",name:"Norwegian"},
-    {code:"da",name:"Danish"},{code:"pl",name:"Polish"},{code:"cs",name:"Czech"},{code:"el",name:"Greek"}
+    {code:"zh",name:"中文"},{code:"en",name:"English"},{code:"es",name:"Spanish"},{code:"fr",name:"French"},
+    {code:"de",name:"German"},{code:"ja",name:"Japanese"},{code:"ko",name:"Korean"},{code:"ru",name:"Russian"},
+    {code:"pt",name:"Portuguese"},{code:"it",name:"Italian"},{code:"ar",name:"Arabic"},{code:"hi",name:"Hindi"}
   ];
 
-  let currentTrans = "", currentLang = "en";
+  let sourceLang = "en", targetLang = "zh"; // 默认：学中文
+  let currentTrans = "", currentText = "";
   let vocab = JSON.parse(localStorage.getItem("slVocab"))||[];
   let history = JSON.parse(localStorage.getItem("slHistory"))||[];
   let shadowStepIndex = 0;
-  
-  // 录音核心变量（修复后）
-  let mediaRecorder = null;
-  let audioChunks = [];
-  let audioStream = null;
+  let mediaRecorder = null, audioChunks = [], audioStream = null;
 
-  // 跟读10遍固定倍速顺序
+  // 跟读10遍固定顺序
   const shadowPlan = [
-    {rate:0.6},{rate:0.6},
-    {rate:0.8},{rate:0.8},
-    {rate:1.0},
-    {rate:0.6},
-    {rate:0.8},{rate:0.8},
-    {rate:1.0},{rate:1.0}
+    {rate:0.6},{rate:0.6},{rate:0.8},{rate:0.8},{rate:1.0},
+    {rate:0.6},{rate:0.8},{rate:0.8},{rate:1.0},{rate:1.0}
   ];
 
   window.onload = () => {
     document.getElementById('text').placeholder = txt.placeholder;
     document.querySelector('button[onclick="processText()"]').textContent = `🌍 ${txt.translate}`;
+    
+    // 初始化双语言选择
+    const sourceSel = document.getElementById("sourceLang");
+    const targetSel = document.getElementById("targetLang");
+    LANGUAGES.forEach(l=>{
+      let o1=document.createElement("option"),o2=document.createElement("option");
+      o1.value=l.code;o1.textContent=l.name;sourceSel.appendChild(o1);
+      o2.value=l.code;o2.textContent=l.name;targetSel.appendChild(o2);
+    });
+    // 默认：母语英文，学习中文
+    sourceSel.value = localStorage.getItem("slSource")||"en";
+    targetSel.value = localStorage.getItem("slTarget")||"zh";
+    sourceSel.onchange = e=>{localStorage.setItem("slSource",e.target.value);sourceLang=e.target.value};
+    targetSel.onchange = e=>{localStorage.setItem("slTarget",e.target.value);targetLang=e.target.value};
+    sourceLang = sourceSel.value; targetLang = targetSel.value;
 
-    const sel = document.getElementById("targetLang");
-    LANGUAGES.forEach(l=>{const o=document.createElement("option");o.value=l.code;o.textContent=l.code.toUpperCase();sel.appendChild(o)});
-    sel.value = localStorage.getItem("slLang")||"en";
-    sel.onchange = e=>{localStorage.setItem("slLang",e.target.value);currentLang=e.target.value};
-    currentLang = sel.value;
-    renderVocab();
-    renderHistory();
-    loadDailyQuote();
+    renderVocab(); renderHistory(); loadDailyQuote();
   };
 
   // 页面切换
@@ -168,14 +170,15 @@
     event.target.classList.add("active");
   }
 
-  // 翻译
+  // 翻译（支持双语互译，主学中文）
   async function processText(){
     const t = document.getElementById("text").value.trim();if(!t)return;
+    currentText = t;
     document.getElementById("load").style.display="flex";
     try{
       const r = await fetch("/api/ai-process",{
         method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({text:t,lang:currentLang})
+        body:JSON.stringify({text:t,from:sourceLang,to:targetLang})
       });
       const d = await r.json(); 
       currentTrans = d.translated;
@@ -194,26 +197,27 @@
     document.getElementById("load").style.display="none";
   }
 
-  // 统一语音播放
+  // 统一发音
   function speakText(text){
     window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
-    u.lang = currentLang;
+    u.lang = targetLang;
     window.speechSynthesis.speak(u);
   }
   async function speakAndGetDur(text, rate=1){
     return new Promise(resolve=>{
       window.speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text);
-      u.lang = currentLang; 
-      u.rate = rate;
+      u.lang = targetLang; u.rate = rate;
       const start = Date.now();
       u.onend = ()=>resolve(Date.now()-start);
       window.speechSynthesis.speak(u);
     })
   }
 
-  // 影子跟读（带正常录音功能）
+  // ==============================
+  // 影子跟读：仅最后一遍显示录音按钮
+  // ==============================
   function initShadow(){
     if(!currentTrans)return;
     shadowStepIndex = 0;
@@ -224,6 +228,7 @@
     showShadowStep();
   }
   function showShadowStep(){
+    const isLastStep = shadowStepIndex === shadowPlan.length - 1;
     if(shadowStepIndex >= shadowPlan.length){
       document.getElementById("currentStatus").textContent = txt.done;
       document.getElementById("shadowPlayArea").innerHTML = "";
@@ -231,13 +236,13 @@
     }
     const step = shadowPlan[shadowStepIndex];
     document.getElementById("currentStatus").textContent = txt.shadowStep.replace("{n}",shadowStepIndex+1).replace("{rate}",step.rate);
-    // 跟读按钮组
-    document.getElementById("shadowPlayArea").innerHTML = `
+    // 仅最后一遍显示录音按钮
+    document.getElementById("shadowPlayArea").innerHTML = isLastStep ? `
       <button class="play-btn" onclick="playShadowStep()">${txt.play}</button>
       <button class="record-btn" onclick="startRecord()">${txt.record}</button>
       <button class="stop-record-btn" onclick="stopRecord()">${txt.stopRecord}</button>
       <button class="play-record-btn" onclick="playRecord()">${txt.playRecord}</button>
-    `;
+    ` : `<button class="play-btn" onclick="playShadowStep()">${txt.play}</button>`;
   }
   async function playShadowStep(){
     const step = shadowPlan[shadowStepIndex];
@@ -247,51 +252,15 @@
     showShadowStep();
   }
 
-  // ======================================
-  // 修复：跟读录音/停止/播放（有声音+明显反应）
-  // ======================================
-  async function startRecord() {
-    try {
-      // 获取麦克风权限
-      audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      audioChunks = [];
-      mediaRecorder = new MediaRecorder(audioStream);
-      
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) audioChunks.push(e.data);
-      };
-
-      mediaRecorder.start();
-      document.getElementById("currentStatus").textContent = txt.recording;
-    } catch (err) {
-      alert("请允许麦克风权限");
-    }
-  }
-
-  function stopRecord() {
-    if (!mediaRecorder || mediaRecorder.state === "inactive") return;
-    mediaRecorder.stop();
-    audioStream.getTracks().forEach(track => track.stop());
-    document.getElementById("currentStatus").textContent = txt.recordStop;
-  }
-
-  function playRecord() {
-    if (audioChunks.length === 0) {
-      alert(txt.noRecord);
-      return;
-    }
-    const audioBlob = new Blob(audioChunks, { type: "audio/wav" });
-    const audioUrl = URL.createObjectURL(audioBlob);
-    const audio = new Audio(audioUrl);
-    audio.play();
-  }
-
-  // 情景挑战
+  // ==============================
+  // 情景挑战：仅最后一轮显示录音按钮
+  // ==============================
   async function startChallenge(){
     if(!currentTrans)return;
     const st = document.getElementById("currentStatus");
     st.className = "status-box challenge-status"; st.classList.remove("hidden");
     const words = currentTrans.split(/\s+/);
+    let challengeStep = 0;
 
     const steps = [
       {rate:0.8, text:currentTrans, label:txt.challenge1, times:2},
@@ -301,11 +270,22 @@
 
     for(let s of steps){
       for(let i=0;i<s.times;i++){
+        const isLastRound = challengeStep === steps.length - 1 && i === s.times - 1;
         st.textContent = s.label;
-        document.getElementById("result").innerHTML = `<div class="border p-6 rounded-xl bg-white"><p class="text-xl">${s.text}</p></div>`;
+        // 仅最后一轮显示录音按钮
+        document.getElementById("result").innerHTML = isLastRound ? `
+          <div class="border p-6 rounded-xl bg-white">
+            <p class="text-xl">${s.text}</p>
+            <div class="flex gap-2 mt-3">
+              <button class="record-btn" onclick="startRecord()">${txt.record}</button>
+              <button class="stop-record-btn" onclick="stopRecord()">${txt.stopRecord}</button>
+              <button class="play-record-btn" onclick="playRecord()">${txt.playRecord}</button>
+            </div>
+          </div>` : `<div class="border p-6 rounded-xl bg-white"><p class="text-xl">${s.text}</p></div>`;
         const dur = await speakAndGetDur(s.text, s.rate);
         await new Promise(r=>setTimeout(r, dur + 3000));
       }
+      challengeStep++;
     }
     st.textContent = txt.done;
     document.getElementById("result").innerHTML = "";
@@ -314,28 +294,40 @@
     return words.map((word, idx)=>idx%2!==0?`<span class="word-gap">____</span>`:word).join(" ");
   }
 
-  // 单词点击添加
+  // 录音功能
+  async function startRecord() {
+    try {
+      audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioChunks = [];
+      mediaRecorder = new MediaRecorder(audioStream);
+      mediaRecorder.ondataavailable = e=>audioChunks.push(e.data);
+      mediaRecorder.start();
+      document.getElementById("currentStatus").textContent = txt.recording;
+    } catch (err) { alert("请允许麦克风权限"); }
+  }
+  function stopRecord() {
+    if(!mediaRecorder||mediaRecorder.state==="inactive")return;
+    mediaRecorder.stop(); audioStream.getTracks().forEach(t=>t.stop());
+    document.getElementById("currentStatus").textContent = txt.recordStop;
+  }
+  function playRecord() {
+    if(audioChunks.length===0){alert(txt.noRecord);return;}
+    new Audio(URL.createObjectURL(new Blob(audioChunks,{type:'audio/wav'}))).play();
+  }
+
+  // 单词功能
   function makeWordsClickable(){
     const p=document.getElementById("transSentence");
     p.innerHTML=p.innerText.split(/\s+/).map(w=>`<span class="clickable-word" onclick="addWord(this)">${w}</span>`).join(" ");
   }
   function addWord(el){
     const w=el.innerText.replace(/[.,!?;:]/g,"").trim();
-    if(w && !vocab.includes(w)){
-      vocab.push(w);
-      localStorage.setItem("slVocab",JSON.stringify(vocab));
-      renderVocab();
-      alert(txt.wordAdded);
-    }
+    if(w&&!vocab.includes(w)){vocab.push(w);localStorage.setItem("slVocab",JSON.stringify(vocab));renderVocab();alert(txt.wordAdded);}
   }
-
-  // 单词本
   function importWords(){document.getElementById("vocabArea").classList.toggle("hidden")}
   function saveImport(){
     const ws=document.getElementById("importInput").value.split("\n").filter(x=>x.trim());
-    vocab=[...new Set([...vocab,...ws])];
-    localStorage.setItem("slVocab",JSON.stringify(vocab));
-    renderVocab();
+    vocab=[...new Set([...vocab,...ws])];localStorage.setItem("slVocab",JSON.stringify(vocab));renderVocab();
     document.getElementById("vocabArea").classList.add("hidden");
   }
   function reviewWords(){const w=vocab[Math.floor(Math.random()*vocab.length)];w&&alert(w);}
@@ -353,11 +345,10 @@
   }
   function delWord(i){vocab.splice(i,1);localStorage.setItem("slVocab",JSON.stringify(vocab));renderVocab()}
 
-  // 历史记录
+  // 历史
   function saveHistory(text,trans){
-    history.unshift({text,trans,lang:currentLang,time:new Date().toLocaleString()});
-    localStorage.setItem("slHistory",JSON.stringify(history));
-    renderHistory();
+    history.unshift({text,trans,from:sourceLang,to:targetLang,time:new Date().toLocaleString()});
+    localStorage.setItem("slHistory",JSON.stringify(history));renderHistory();
   }
   function renderHistory(){
     document.getElementById("historyList").innerHTML=history.map(h=>`
