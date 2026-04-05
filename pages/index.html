@@ -4,19 +4,21 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>StreamLang</title>
-  <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    .loading{display:none;position:fixed;inset:0;background:rgba(255,255,255,0.9);justify-content:center;align-items:center;z-index:999}
+    *{margin:0;padding:0;box-sizing:border-box;font-family:system-ui,sans-serif}
+    body{background:#f3f4f6;max-width:600px;margin:0 auto;padding:16px}
+    .loading{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:999}
     .spin{width:40px;height:40px;border:4px solid #eee;border-top:4px solid #3b82f6;border-radius:50%;animation:spin 1s linear infinite}
     @keyframes spin{100%{transform:rotate(360deg)}}
-    .clickable-word {cursor: pointer;color: #3b82f6;font-weight:500}
+    .clickable-word{cursor:pointer;color:#3b82f6;font-weight:500}
     .clickable-word:hover{text-decoration:underline}
-    .page {display:none}
-    .page.active {display:block}
-    .nav-btn.active {font-weight:bold;color:#3b82f6;border-bottom:2px solid #3b82f6}
-    .status-box {padding:12px 16px;border-radius:10px;margin-bottom:12px;font-weight:600}
-    .shadow-status {background:#eff6ff;border-left:4px solid #3b82f6;color:#1e40af}
-    .challenge-status {background:#faf5ff;border-left:4px solid #8b5cf6;color:#6d28d9}
+    .page{display:none}
+    .page.active{display:block}
+    .nav-btn{padding:8px;border:none;background:none;cursor:pointer}
+    .nav-btn.active{font-weight:bold;color:#3b82f6;border-bottom:2px solid #3b82f6}
+    .status-box{padding:12px 16px;border-radius:10px;margin-bottom:12px;font-weight:600}
+    .shadow-status{background:#eff6ff;border-left:4px solid #3b82f6;color:#1e40af}
+    .challenge-status{background:#faf5ff;border-left:4px solid #8b5cf6;color:#6d28d9}
     .play-btn,.record-btn,.stop-record-btn,.play-record-btn{padding:8px 16px;border-radius:8px;margin:4px;border:none;cursor:pointer}
     .play-btn{background:#3b82f6;color:white}
     .record-btn{background:#ef4444;color:white}
@@ -24,145 +26,132 @@
     .play-record-btn{background:#10b981;color:white}
     .word-gap{color:#6b7280;font-weight:600}
     .lang-select{display:flex;gap:8px;margin-left:auto}
+    textarea{width:100%;padding:16px;border:1px solid #ddd;border-radius:12px;margin-bottom:16px;font-size:16px}
+    button{border:none;border-radius:8px;cursor:pointer}
+    .border-card{border:1px solid #ddd;border-radius:12px;padding:16px;background:white;margin-bottom:12px}
+    .grid-nav{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:16px;border-bottom:1px solid #ddd;padding-bottom:16px}
+    .support-mail{margin-top:12px;text-align:center;font-size:14px;color:#374151}
   </style>
 </head>
-<body class="p-4 bg-gray-50 max-w-2xl mx-auto">
+<body>
 <div class="loading" id="load"><div class="spin"></div></div>
 
-<!-- 顶部：双语言选择（源语言+目标语言，主学中文） -->
-<div class="flex justify-between items-center mb-4">
-  <h1 class="text-3xl font-bold text-blue-600">StreamLang</h1>
+<!-- 顶部双语言选择 -->
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+  <h1 style="font-size:24px;color:#3b82f6">StreamLang</h1>
   <div class="lang-select">
-    <select id="sourceLang" class="p-2 border rounded-md text-sm bg-white" title="My Language"></select>
-    <select id="targetLang" class="p-2 border rounded-md text-sm bg-white" title="Learning Language"></select>
+    <select id="sourceLang" style="padding:8px;border-radius:8px" title="源语言"></select>
+    <select id="targetLang" style="padding:8px;border-radius:8px" title="目标语言"></select>
   </div>
 </div>
 
-<!-- 导航栏 -->
-<div class="grid grid-cols-5 gap-1 text-lg mb-4 border-b pb-2">
-  <button class="nav-btn active py-1" onclick="switchPage('home')">🏠 Home</button>
-  <button class="nav-btn py-1" onclick="switchPage('vocab')">📖 Vocab</button>
-  <button class="nav-btn py-1" onclick="switchPage('history')">📜 History</button>
-  <button class="nav-btn py-1" onclick="switchPage('member')">👑 Pro</button>
-  <button class="nav-btn py-1" onclick="switchPage('tiktok')">🎬 TikTok</button>
+<!-- 导航栏（最初结构） -->
+<div class="grid-nav">
+  <button class="nav-btn active" onclick="switchPage('home')">🏠 Home</button>
+  <button class="nav-btn" onclick="switchPage('vocab')">📖 Vocab</button>
+  <button class="nav-btn" onclick="switchPage('history')">📜 History</button>
+  <button class="nav-btn" onclick="switchPage('member')">👑 Pro</button>
+  <button class="nav-btn" onclick="switchPage('tiktok')">🎬 TikTok</button>
 </div>
 
-<!-- Home 页 -->
+<!-- Home -->
 <div id="home" class="page active">
-  <textarea id="text" rows="5" class="w-full p-4 border rounded-xl mb-4 text-xl" placeholder="输入文本..."></textarea>
-  <div class="flex gap-3 mb-6">
-    <button onclick="processText()" class="flex-1 p-4 bg-blue-600 text-white rounded-xl text-xl font-medium">🌍 Translate</button>
-  </div>
+  <textarea id="text" rows="5" placeholder="输入文本..."></textarea>
+  <button onclick="processText()" style="width:100%;padding:16px;background:#3b82f6;color:white;font-size:18px">🌍 Translate</button>
   <div id="currentStatus" class="status-box hidden"></div>
-  <div id="shadowPlayArea" class="hidden mb-4 flex flex-wrap gap-2"></div>
-  <div id="result" class="space-y-4"></div>
+  <div id="shadowPlayArea" class="hidden" style="display:flex;flex-wrap:wrap;gap:8px;margin:16px 0"></div>
+  <div id="result"></div>
 </div>
 
 <!-- 单词本 -->
 <div id="vocab" class="page">
-  <h3 class="text-xl font-bold mb-3">My Vocabulary</h3>
-  <div class="flex gap-2 mb-3">
-    <button onclick="importWords()" class="flex-1 p-2 bg-blue-100 rounded-md text-sm">📥 Import</button>
-    <button onclick="reviewWords()" class="flex-1 p-2 bg-green-100 rounded-md text-sm">🔁 Review</button>
-    <button onclick="dictationTest()" class="flex-1 p-2 bg-purple-100 rounded-md text-sm">🎧 Dictation</button>
+  <h2 style="margin-bottom:16px">My Vocabulary</h2>
+  <div style="display:flex;gap:8px;margin-bottom:16px">
+    <button onclick="importWords()" style="flex:1;padding:8px;background:#dbeafe">📥 Import</button>
+    <button onclick="reviewWords()" style="flex:1;padding:8px;background:#dcfce7">🔁 Review</button>
+    <button onclick="dictationTest()" style="flex:1;padding:8px;background:#f3e8ff">🎧 Dictation</button>
   </div>
-  <div id="vocabArea" class="hidden mb-3"><textarea id="importInput" rows="3" class="w-full p-2 border rounded-lg" placeholder="Paste words..."></textarea><button onclick="saveImport()" class="mt-1 w-full p-2 bg-blue-600 text-white rounded-lg">Save</button></div>
-  <div id="vocabList" class="space-y-2 max-h-[400px] overflow-y-auto"></div>
+  <div id="vocabArea" class="hidden" style="margin-bottom:16px">
+    <textarea id="importInput" rows="3" placeholder="Paste words..."></textarea>
+    <button onclick="saveImport()" style="width:100%;padding:8px;background:#3b82f6;color:white">Save</button>
+  </div>
+  <div id="vocabList" style="max-height:400px;overflow-y:auto"></div>
 </div>
 
-<!-- 学习历史 -->
+<!-- 历史 -->
 <div id="history" class="page">
-  <h3 class="text-xl font-bold mb-3">Study History</h3>
-  <div id="historyList" class="space-y-2 max-h-[500px] overflow-y-auto"></div>
+  <h2 style="margin-bottom:16px">Study History</h2>
+  <div id="historyList" style="max-height:500px;overflow-y:auto"></div>
 </div>
 
-<!-- Pro会员页（添加支持邮箱） -->
+<!-- Pro（邮箱在Lemon下方单独一行） -->
 <div id="member" class="page">
-  <div class="bg-gradient-to-r from-blue-500 to-purple-500 text-white p-6 rounded-lg mb-4 text-center">
-    <h3 class="text-2xl font-bold">StreamLang Pro</h3>
-    <p class="text-sm mt-1">7 Days Free Trial</p>
-    <p class="text-xs mt-2">Support: lei20240000@gmail.com</p>
+  <div style="background:linear-gradient(to right,#3b82f6,#8b5cf6);color:white;padding:24px;border-radius:12px;text-align:center;margin-bottom:16px">
+    <h3>StreamLang Pro</h3>
+    <p style="margin-top:8px">7 Days Free Trial</p>
   </div>
-  <div class="border p-4 rounded-lg mb-2 bg-white"><p class="font-bold text-lg">Quarterly: $4.99</p></div>
-  <div class="border p-4 rounded-lg mb-2 bg-white"><p class="font-bold text-lg">Yearly: $14.99</p></div>
-  <div class="border p-4 rounded-lg mb-4 bg-white"><p class="font-bold text-lg">Lifetime: $29.99</p></div>
-  <a href="https://kingstream.lemonsqueezy.com/checkout/buy/54eec727-1c41-489d-854e-062134ece2a3" target="_blank" class="block w-full p-3 bg-blue-600 text-white rounded-lg text-center text-lg">Lemon Squeezy</a>
+  <div class="border-card"><p>Quarterly: $4.99</p></div>
+  <div class="border-card"><p>Yearly: $14.99</p></div>
+  <div class="border-card"><p>Lifetime: $29.99</p></div>
+  <a href="https://kingstream.lemonsqueezy.com/checkout/buy/54eec727-1c41-489d-854e-062134ece2a3" target="_blank" style="display:block;width:100%;padding:16px;background:#3b82f6;color:white;text-align:center;border-radius:8px">Lemon Squeezy</a>
+  <p class="support-mail">Support: lei20240000@gmail.com</p>
 </div>
 
 <!-- TikTok -->
-<div id="tiktok" class="page text-center">
-  <div class="bg-gradient-to-r from-blue-500 to-purple-500 text-white p-8 rounded-lg mb-4">
-    <p id="dailyQuote" class="text-2xl">Daily Sentence</p>
+<div id="tiktok" class="page">
+  <div style="background:linear-gradient(to right,#3b82f6,#8b5cf6);color:white;padding:32px;border-radius:12px;text-align:center;margin-bottom:16px">
+    <p id="dailyQuote" style="font-size:20px">Daily Sentence</p>
   </div>
-  <button onclick="saveCard()" class="w-full p-3 bg-blue-600 text-white rounded-lg mb-2 text-lg">💾 Save Image</button>
-  <a href="https://www.tiktok.com" target="_blank" class="block w-full p-3 bg-black rounded-lg text-lg text-white py-3">📤 Post TikTok</a>
+  <button onclick="saveCard()" style="width:100%;padding:16px;background:#3b82f6;color:white;margin-bottom:16px">💾 Save Image</button>
+  <a href="https://tiktok.com" target="_blank" style="display:block;width:100%;padding:16px;background:black;color:white;text-align:center;border-radius:8px">📤 Post TikTok</a>
 </div>
 
 <script>
-  const sysLang = navigator.language.startsWith('zh') ? 'zh' : 'en';
+  // 40种源语言 + 20种目标语言（含指定6种，按使用人口排序）
+  const SOURCE_LANGUAGES = [
+    {code:"en",name:"English"},{code:"zh",name:"中文"},{code:"hi",name:"Hindi"},{code:"es",name:"Spanish"},
+    {code:"ar",name:"Arabic"},{code:"bn",name:"Bengali"},{code:"fr",name:"French"},{code:"ru",name:"Russian"},
+    {code:"pt",name:"Portuguese"},{code:"ur",name:"Urdu"},{code:"id",name:"Indonesian"},{code:"de",name:"German"},
+    {code:"ja",name:"Japanese"},{code:"sw",name:"Swahili"},{code:"te",name:"Telugu"},{code:"mr",name:"Marathi"},
+    {code:"ta",name:"Tamil"},{code:"vi",name:"Vietnamese"},{code:"ko",name:"Korean"},{code:"tr",name:"Turkish"},
+    {code:"it",name:"Italian"},{code:"pl",name:"Polish"},{code:"uk",name:"Ukrainian"},{code:"pa",name:"Punjabi"},
+    {code:"jv",name:"Javanese"},{code:"ml",name:"Malayalam"},{code:"ha",name:"Hausa"},{code:"fa",name:"Persian"},
+    {code:"th",name:"Thai"},{code:"nl",name:"Dutch"},{code:"ro",name:"Romanian"},{code:"sv",name:"Swedish"},
+    {code:"da",name:"Danish"},{code:"fi",name:"Finnish"},{code:"no",name:"Norwegian"},{code:"cs",name:"Czech"},
+    {code:"sk",name:"Slovak"},{code:"el",name:"Greek"},{code:"he",name:"Hebrew"},{code:"ms",name:"Malay"}
+  ];
+  const TARGET_LANGUAGES = [
+    {code:"zh",name:"中文"},{code:"en",name:"English"},{code:"hi",name:"Hindi"},{code:"es",name:"Spanish"},
+    {code:"ar",name:"Arabic"},{code:"bn",name:"Bengali"},{code:"fr",name:"French"},{code:"ru",name:"Russian"},
+    {code:"pt",name:"Portuguese"},{code:"ur",name:"Urdu"},{code:"vi",name:"Vietnamese"},{code:"sw",name:"Swahili"},
+    {code:"de",name:"German"},{code:"ja",name:"Japanese"},{code:"tr",name:"Turkish"},{code:"it",name:"Italian"},
+    {code:"th",name:"Thai"},{code:"nl",name:"Dutch"},{code:"ha",name:"Hausa"},{code:"jv",name:"Javanese"}
+  ];
+
   const I18N = {
-    zh: {
-      home:"首页",vocab:"单词本",history:"学习历史",member:"Pro",tiktok:"TikTok",
-      placeholder:"输入文本...",translate:"翻译",read:"朗读",shadow:"影子跟读",challenge:"情境挑战",
-      import:"导入",review:"复习",dictate:"听写",save:"保存",
-      shadowStep:"跟读第{n}/10遍 · {rate}倍速",play:"播放原音",record:"录音",stopRecord:"停止录音",playRecord:"播放录音",
-      challenge1:"0.8倍速 × 2遍",challenge2:"1.0倍速 × 2遍",challenge3:"1.0倍速 · 单词空缺",
-      done:"完成！",wordAdded:"单词已添加",recording:"🎤 录音中...",recordStop:"录音已停止",noRecord:"无录音可播放"
-    },
-    en: {
-      home:"Home",vocab:"Vocab",history:"History",member:"Pro",tiktok:"TikTok",
-      placeholder:"Type text...",translate:"Translate",read:"Read",shadow:"Shadow",challenge:"Scene Challenge",
-      import:"Import",review:"Review",dictate:"Dictation",save:"Save",
-      shadowStep:"Shadow {n}/10 · {rate}x",play:"Play",record:"Record",stopRecord:"Stop Record",playRecord:"Play Record",
-      challenge1:"0.8x × 2 times",challenge2:"1.0x × 2 times",challenge3:"1.0x · Word Gap",
-      done:"Done!",wordAdded:"Word added",recording:"🎤 Recording...",recordStop:"Recording stopped",noRecord:"No recording"
-    }
+    zh:{placeholder:"输入文本...",translate:"翻译",read:"朗读",shadow:"影子跟读",challenge:"情境挑战",shadowStep:"跟读第{n}/10遍 · {rate}倍速",play:"播放原音",record:"录音",stopRecord:"停止录音",playRecord:"播放录音",challenge1:"0.8倍速 × 2遍",challenge2:"1.0倍速 × 2遍",challenge3:"1.0倍速 · 单词空缺",done:"完成！",wordAdded:"单词已添加",recording:"🎤 录音中...",recordStop:"录音已停止",noRecord:"无录音可播放"},
+    en:{placeholder:"Type text...",translate:"Translate",read:"Read",shadow:"Shadow",challenge:"Scene Challenge",shadowStep:"Shadow {n}/10 · {rate}x",play:"Play",record:"Record",stopRecord:"Stop Record",playRecord:"Play Record",challenge1:"0.8x × 2 times",challenge2:"1.0x × 2 times",challenge3:"1.0x · Word Gap",done:"Done!",wordAdded:"Word added",recording:"🎤 Recording...",recordStop:"Recording stopped",noRecord:"No recording"}
   };
+  const sysLang = navigator.language.startsWith('zh')?'zh':'en';
   const txt = I18N[sysLang];
 
-  // 全语言列表（主学中文，支持互译）
-  const LANGUAGES = [
-    {code:"zh",name:"中文"},{code:"en",name:"English"},{code:"es",name:"Spanish"},{code:"fr",name:"French"},
-    {code:"de",name:"German"},{code:"ja",name:"Japanese"},{code:"ko",name:"Korean"},{code:"ru",name:"Russian"},
-    {code:"pt",name:"Portuguese"},{code:"it",name:"Italian"},{code:"ar",name:"Arabic"},{code:"hi",name:"Hindi"}
-  ];
+  let sourceLang="en",targetLang="zh",currentTrans="",currentText="";
+  let vocab=JSON.parse(localStorage.getItem("slVocab"))||[],history=JSON.parse(localStorage.getItem("slHistory"))||[];
+  let shadowStepIndex=0,mediaRecorder=null,audioChunks=[],audioStream=null;
+  const shadowPlan=[{rate:0.6},{rate:0.6},{rate:0.8},{rate:0.8},{rate:1.0},{rate:0.6},{rate:0.8},{rate:0.8},{rate:1.0},{rate:1.0}];
 
-  let sourceLang = "en", targetLang = "zh"; // 默认：学中文
-  let currentTrans = "", currentText = "";
-  let vocab = JSON.parse(localStorage.getItem("slVocab"))||[];
-  let history = JSON.parse(localStorage.getItem("slHistory"))||[];
-  let shadowStepIndex = 0;
-  let mediaRecorder = null, audioChunks = [], audioStream = null;
-
-  // 跟读10遍固定顺序
-  const shadowPlan = [
-    {rate:0.6},{rate:0.6},{rate:0.8},{rate:0.8},{rate:1.0},
-    {rate:0.6},{rate:0.8},{rate:0.8},{rate:1.0},{rate:1.0}
-  ];
-
-  window.onload = () => {
-    document.getElementById('text').placeholder = txt.placeholder;
-    document.querySelector('button[onclick="processText()"]').textContent = `🌍 ${txt.translate}`;
-    
-    // 初始化双语言选择
-    const sourceSel = document.getElementById("sourceLang");
-    const targetSel = document.getElementById("targetLang");
-    LANGUAGES.forEach(l=>{
-      let o1=document.createElement("option"),o2=document.createElement("option");
-      o1.value=l.code;o1.textContent=l.name;sourceSel.appendChild(o1);
-      o2.value=l.code;o2.textContent=l.name;targetSel.appendChild(o2);
-    });
-    // 默认：母语英文，学习中文
-    sourceSel.value = localStorage.getItem("slSource")||"en";
-    targetSel.value = localStorage.getItem("slTarget")||"zh";
-    sourceSel.onchange = e=>{localStorage.setItem("slSource",e.target.value);sourceLang=e.target.value};
-    targetSel.onchange = e=>{localStorage.setItem("slTarget",e.target.value);targetLang=e.target.value};
-    sourceLang = sourceSel.value; targetLang = targetSel.value;
-
-    renderVocab(); renderHistory(); loadDailyQuote();
+  window.onload=()=>{
+    const s=document.getElementById("sourceLang"),t=document.getElementById("targetLang");
+    SOURCE_LANGUAGES.forEach(l=>{let o=document.createElement("option");o.value=l.code;o.textContent=l.name;s.appendChild(o);});
+    TARGET_LANGUAGES.forEach(l=>{let o=document.createElement("option");o.value=l.code;o.textContent=l.name;t.appendChild(o);});
+    s.value=localStorage.getItem("slSource")||"en";
+    t.value=localStorage.getItem("slTarget")||"zh";
+    s.onchange=e=>{localStorage.setItem("slSource",e.target.value);sourceLang=e.target.value};
+    t.onchange=e=>{localStorage.setItem("slTarget",e.target.value);targetLang=e.target.value};
+    sourceLang=s.value;targetLang=t.value;
+    renderVocab();renderHistory();loadDailyQuote();
   };
 
-  // 页面切换
   function switchPage(id){
     document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
     document.querySelectorAll(".nav-btn").forEach(b=>b.classList.remove("active"));
@@ -170,203 +159,61 @@
     event.target.classList.add("active");
   }
 
-  // 翻译（支持双语互译，主学中文）
+  // 最初结构：调用后端/api/ai-process，前端无Key
   async function processText(){
-    const t = document.getElementById("text").value.trim();if(!t)return;
-    currentText = t;
+    const t=document.getElementById("text").value.trim();if(!t)return;
     document.getElementById("load").style.display="flex";
     try{
-      const r = await fetch("/api/ai-process",{
+      const r=await fetch("/api/ai-process",{
         method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({text:t,from:sourceLang,to:targetLang})
+        body:JSON.stringify({text:t,source:sourceLang,target:targetLang})
       });
-      const d = await r.json(); 
-      currentTrans = d.translated;
+      const d=await r.json();currentTrans=d.translated;
       document.getElementById("result").innerHTML=`
-        <div class="border p-6 rounded-xl bg-white">
-          <p id="transSentence" class="text-xl text-blue-600 mb-4">${d.translated}</p>
-          <div class="flex gap-3 flex-wrap">
-            <button onclick="speakText('${d.translated}')" class="p-3 bg-gray-100 rounded-lg">${txt.read}</button>
-            <button onclick="initShadow()" class="p-3 bg-blue-100 rounded-lg">${txt.shadow}</button>
-            <button onclick="startChallenge()" class="p-3 bg-purple-100 rounded-lg">${txt.challenge}</button>
+        <div class="border-card">
+          <p id="transSentence" style="font-size:18px;color:#3b82f6;margin-bottom:12px">${currentTrans}</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button onclick="speakText('${currentTrans}')" class="play-btn">${txt.read}</button>
+            <button onclick="initShadow()" class="play-btn">${txt.shadow}</button>
+            <button onclick="startChallenge()" class="play-btn">${txt.challenge}</button>
           </div>
         </div>`;
-      makeWordsClickable();
-      saveHistory(t, d.translated);
-    }catch(e){alert("Error")}
-    document.getElementById("load").style.display="none";
+      makeWordsClickable();saveHistory(t,currentTrans);
+    }catch(e){alert("Translation Error")}
+    finally{document.getElementById("load").style.display="none"}
   }
 
-  // 统一发音
-  function speakText(text){
-    window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = targetLang;
-    window.speechSynthesis.speak(u);
-  }
-  async function speakAndGetDur(text, rate=1){
-    return new Promise(resolve=>{
-      window.speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = targetLang; u.rate = rate;
-      const start = Date.now();
-      u.onend = ()=>resolve(Date.now()-start);
-      window.speechSynthesis.speak(u);
-    })
-  }
+  // 发音
+  function speakText(text){window.speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang=targetLang==='zh'?'zh-CN':targetLang;window.speechSynthesis.speak(u);}
+  async function speakAndGetDur(text,rate=1){return new Promise(r=>{window.speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang=targetLang==='zh'?'zh-CN':targetLang;u.rate=rate;u.onend=()=>r(1500);window.speechSynthesis.speak(u);})}
 
-  // ==============================
-  // 影子跟读：仅最后一遍显示录音按钮
-  // ==============================
-  function initShadow(){
-    if(!currentTrans)return;
-    shadowStepIndex = 0;
-    const st = document.getElementById("currentStatus");
-    const playArea = document.getElementById("shadowPlayArea");
-    st.className = "status-box shadow-status"; st.classList.remove("hidden");
-    playArea.classList.remove("hidden");
-    showShadowStep();
-  }
-  function showShadowStep(){
-    const isLastStep = shadowStepIndex === shadowPlan.length - 1;
-    if(shadowStepIndex >= shadowPlan.length){
-      document.getElementById("currentStatus").textContent = txt.done;
-      document.getElementById("shadowPlayArea").innerHTML = "";
-      return;
-    }
-    const step = shadowPlan[shadowStepIndex];
-    document.getElementById("currentStatus").textContent = txt.shadowStep.replace("{n}",shadowStepIndex+1).replace("{rate}",step.rate);
-    // 仅最后一遍显示录音按钮
-    document.getElementById("shadowPlayArea").innerHTML = isLastStep ? `
-      <button class="play-btn" onclick="playShadowStep()">${txt.play}</button>
-      <button class="record-btn" onclick="startRecord()">${txt.record}</button>
-      <button class="stop-record-btn" onclick="stopRecord()">${txt.stopRecord}</button>
-      <button class="play-record-btn" onclick="playRecord()">${txt.playRecord}</button>
-    ` : `<button class="play-btn" onclick="playShadowStep()">${txt.play}</button>`;
-  }
-  async function playShadowStep(){
-    const step = shadowPlan[shadowStepIndex];
-    const dur = await speakAndGetDur(currentTrans, step.rate);
-    await new Promise(r=>setTimeout(r, dur + 3000));
-    shadowStepIndex++;
-    showShadowStep();
-  }
+  // 影子跟读：仅最后一遍录音
+  function initShadow(){if(!currentTrans)return;shadowStepIndex=0;const st=document.getElementById("currentStatus");const pa=document.getElementById("shadowPlayArea");st.className="status-box shadow-status";st.classList.remove("hidden");pa.classList.remove("hidden");showShadowStep();}
+  function showShadowStep(){const isLast=shadowStepIndex===9;if(shadowStepIndex>=10){document.getElementById("currentStatus").textContent=txt.done;document.getElementById("shadowPlayArea").innerHTML="";return;}document.getElementById("currentStatus").textContent=txt.shadowStep.replace("{n}",shadowStepIndex+1).replace("{rate}",shadowPlan[shadowStepIndex].rate);document.getElementById("shadowPlayArea").innerHTML=isLast?`<button class="play-btn" onclick="playShadowStep()">${txt.play}</button><button class="record-btn" onclick="startRecord()">${txt.record}</button><button class="stop-record-btn" onclick="stopRecord()">${txt.stopRecord}</button><button class="play-record-btn" onclick="playRecord()">${txt.playRecord}</button>`:`<button class="play-btn" onclick="playShadowStep()">${txt.play}</button>`;}
+  async function playShadowStep(){await speakAndGetDur(currentTrans,shadowPlan[shadowStepIndex].rate);shadowStepIndex++;showShadowStep();}
 
-  // ==============================
-  // 情景挑战：仅最后一轮显示录音按钮
-  // ==============================
-  async function startChallenge(){
-    if(!currentTrans)return;
-    const st = document.getElementById("currentStatus");
-    st.className = "status-box challenge-status"; st.classList.remove("hidden");
-    const words = currentTrans.split(/\s+/);
-    let challengeStep = 0;
+  // 情景挑战：仅最后一轮录音
+  async function startChallenge(){if(!currentTrans)return;const st=document.getElementById("currentStatus");st.className="status-box challenge-status";st.classList.remove("hidden");const words=currentTrans.split(/\s+/);let step=0;const rounds=[{r:0.8,t:currentTrans,c:2},{r:1.0,t:currentTrans,c:2},{r:1.0,t:maskWords(words),c:1}];for(let g of rounds){for(let i=0;i<g.c;i++){const last=step===2&&i===g.c-1;st.textContent=last?txt.challenge3:(step<2?txt.challenge1:txt.challenge2);document.getElementById("result").innerHTML=last?`<div class="border-card"><p style="font-size:18px">${g.t}</p><div style="margin-top:12px;gap:8px;display:flex"><button class="record-btn" onclick="startRecord()">${txt.record}</button><button class="stop-record-btn" onclick="stopRecord()">${txt.stopRecord}</button><button class="play-record-btn" onclick="playRecord()">${txt.playRecord}</button></div></div>`:`<div class="border-card"><p style="font-size:18px">${g.t}</p></div>`;await speakAndGetDur(g.t,g.r);}step++;}st.textContent=txt.done;document.getElementById("result").innerHTML="";}
+  function maskWords(w){return w.map((x,i)=>i%2!==0?`<span class="word-gap">____</span>`:x).join(" ");}
 
-    const steps = [
-      {rate:0.8, text:currentTrans, label:txt.challenge1, times:2},
-      {rate:1.0, text:currentTrans, label:txt.challenge2, times:2},
-      {rate:1.0, text:maskFullWords(words), label:txt.challenge3, times:1}
-    ];
+  // 录音
+  async function startRecord(){audioStream=await navigator.mediaDevices.getUserMedia({audio:true});audioChunks=[];mediaRecorder=new MediaRecorder(audioStream);mediaRecorder.ondataavailable=e=>audioChunks.push(e.data);mediaRecorder.start();document.getElementById("currentStatus").textContent=txt.recording;}
+  function stopRecord(){if(mediaRecorder&&mediaRecorder.state!=="inactive"){mediaRecorder.stop();audioStream.getTracks().forEach(t=>t.stop());document.getElementById("currentStatus").textContent=txt.recordStop;}}
+  function playRecord(){if(audioChunks.length===0){alert(txt.noRecord);return;}new Audio(URL.createObjectURL(new Blob(audioChunks,{type:"audio/wav"}))).play();}
 
-    for(let s of steps){
-      for(let i=0;i<s.times;i++){
-        const isLastRound = challengeStep === steps.length - 1 && i === s.times - 1;
-        st.textContent = s.label;
-        // 仅最后一轮显示录音按钮
-        document.getElementById("result").innerHTML = isLastRound ? `
-          <div class="border p-6 rounded-xl bg-white">
-            <p class="text-xl">${s.text}</p>
-            <div class="flex gap-2 mt-3">
-              <button class="record-btn" onclick="startRecord()">${txt.record}</button>
-              <button class="stop-record-btn" onclick="stopRecord()">${txt.stopRecord}</button>
-              <button class="play-record-btn" onclick="playRecord()">${txt.playRecord}</button>
-            </div>
-          </div>` : `<div class="border p-6 rounded-xl bg-white"><p class="text-xl">${s.text}</p></div>`;
-        const dur = await speakAndGetDur(s.text, s.rate);
-        await new Promise(r=>setTimeout(r, dur + 3000));
-      }
-      challengeStep++;
-    }
-    st.textContent = txt.done;
-    document.getElementById("result").innerHTML = "";
-  }
-  function maskFullWords(words){
-    return words.map((word, idx)=>idx%2!==0?`<span class="word-gap">____</span>`:word).join(" ");
-  }
-
-  // 录音功能
-  async function startRecord() {
-    try {
-      audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      audioChunks = [];
-      mediaRecorder = new MediaRecorder(audioStream);
-      mediaRecorder.ondataavailable = e=>audioChunks.push(e.data);
-      mediaRecorder.start();
-      document.getElementById("currentStatus").textContent = txt.recording;
-    } catch (err) { alert("请允许麦克风权限"); }
-  }
-  function stopRecord() {
-    if(!mediaRecorder||mediaRecorder.state==="inactive")return;
-    mediaRecorder.stop(); audioStream.getTracks().forEach(t=>t.stop());
-    document.getElementById("currentStatus").textContent = txt.recordStop;
-  }
-  function playRecord() {
-    if(audioChunks.length===0){alert(txt.noRecord);return;}
-    new Audio(URL.createObjectURL(new Blob(audioChunks,{type:'audio/wav'}))).play();
-  }
-
-  // 单词功能
-  function makeWordsClickable(){
-    const p=document.getElementById("transSentence");
-    p.innerHTML=p.innerText.split(/\s+/).map(w=>`<span class="clickable-word" onclick="addWord(this)">${w}</span>`).join(" ");
-  }
-  function addWord(el){
-    const w=el.innerText.replace(/[.,!?;:]/g,"").trim();
-    if(w&&!vocab.includes(w)){vocab.push(w);localStorage.setItem("slVocab",JSON.stringify(vocab));renderVocab();alert(txt.wordAdded);}
-  }
-  function importWords(){document.getElementById("vocabArea").classList.toggle("hidden")}
-  function saveImport(){
-    const ws=document.getElementById("importInput").value.split("\n").filter(x=>x.trim());
-    vocab=[...new Set([...vocab,...ws])];localStorage.setItem("slVocab",JSON.stringify(vocab));renderVocab();
-    document.getElementById("vocabArea").classList.add("hidden");
-  }
+  // 单词/历史
+  function makeWordsClickable(){const p=document.getElementById("transSentence");p.innerHTML=p.innerText.split(/\s+/).map(w=>`<span class="clickable-word" onclick="addWord(this)">${w}</span>`).join(" ");}
+  function addWord(e){const w=e.innerText.replace(/[.,!?;:]/g,"").trim();if(w&&!vocab.includes(w)){vocab.push(w);localStorage.setItem("slVocab",JSON.stringify(vocab));renderVocab();alert(txt.wordAdded);}}
+  function importWords(){document.getElementById("vocabArea").classList.toggle("hidden");}
+  function saveImport(){const w=document.getElementById("importInput").value.split("\n").filter(x=>x.trim());vocab=[...new Set([...vocab,...w])];localStorage.setItem("slVocab",JSON.stringify(vocab));renderVocab();document.getElementById("vocabArea").classList.add("hidden");}
   function reviewWords(){const w=vocab[Math.floor(Math.random()*vocab.length)];w&&alert(w);}
-  function dictationTest(){const w=vocab[Math.floor(Math.random()*vocab.length)];if(w){speakText(w);prompt("Type:")}}
-  function renderVocab(){
-    document.getElementById("vocabList").innerHTML=vocab.length?vocab.map((w,i)=>`
-      <div class="flex justify-between border p-3 rounded-lg">
-        <span class="text-lg">${w}</span>
-        <div class="flex gap-2">
-          <button onclick="speakText('${w}')" class="p-1 bg-gray-100 rounded-xs text-xs">🔊</button>
-          <button onclick="delWord(${i})" class="p-1 bg-red-100 rounded-xs text-xs">🗑️</button>
-        </div>
-      </div>
-    `).join(""):"<p class='text-gray-500'>No words</p>";
-  }
-  function delWord(i){vocab.splice(i,1);localStorage.setItem("slVocab",JSON.stringify(vocab));renderVocab()}
-
-  // 历史
-  function saveHistory(text,trans){
-    history.unshift({text,trans,from:sourceLang,to:targetLang,time:new Date().toLocaleString()});
-    localStorage.setItem("slHistory",JSON.stringify(history));renderHistory();
-  }
-  function renderHistory(){
-    document.getElementById("historyList").innerHTML=history.map(h=>`
-      <div class="border p-3 rounded-lg">
-        <p class="text-sm text-gray-500">${h.time}</p>
-        <p class="text-sm">${h.text}</p>
-        <p class="text-blue-600 text-lg mt-1">${h.trans}</p>
-        <button onclick="speakText('${h.trans}')" class="text-xs p-1 bg-gray-100 rounded-md mt-1">${txt.read}</button>
-      </div>
-    `).join("");
-  }
-
-  // TikTok
-  function loadDailyQuote(){
-    const quotes=["Practice makes perfect.","Never too old to learn.","Keep going, you're doing great!","Every day is a new chance to learn."];
-    document.getElementById("dailyQuote").innerText=quotes[Math.floor(Math.random()*quotes.length)];
-  }
-  function saveCard(){alert("Saved!")}
+  function dictationTest(){const w=vocab[Math.floor(Math.random()*vocab.length)];if(w){speakText(w);prompt("Type:");}}
+  function renderVocab(){document.getElementById("vocabList").innerHTML=vocab.length?vocab.map((w,i)=>`<div class="border-card" style="display:flex;justify-content:space-between;align-items:center"><span>${w}</span><div><button onclick="speakText('${w}')" style="padding:4px 8px;margin-right:4px">🔊</button><button onclick="delWord(${i})" style="padding:4px 8px;background:#fee2e2">🗑️</button></div></div>`).join(""):"<p style='color:#666'>No words</p>";}
+  function delWord(i){vocab.splice(i,1);localStorage.setItem("slVocab",JSON.stringify(vocab));renderVocab();}
+  function saveHistory(t,tr){history.unshift({text:t,trans:tr,time:new Date().toLocaleString()});localStorage.setItem("slHistory",JSON.stringify(history));renderHistory();}
+  function renderHistory(){document.getElementById("historyList").innerHTML=history.map(h=>`<div class="border-card"><p style="font-size:12px;color:#666">${h.time}</p><p>${h.text}</p><p style="color:#3b82f6">${h.trans}</p><button onclick="speakText('${h.trans}')" style="padding:4px 8px;margin-top:8px">${txt.read}</button></div>`).join("");}
+  function loadDailyQuote(){const q=["Practice makes perfect.","Never too old to learn.","Keep going!","Every day is a new chance to learn."];document.getElementById("dailyQuote").innerText=q[Math.floor(Math.random()*q.length)];}
+  function saveCard(){alert("Saved!");}
 </script>
 </body>
 </html>
