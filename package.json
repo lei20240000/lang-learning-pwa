@@ -1,7 +1,8 @@
 {
-  "name": "language-learning",
+  "name": "lang-app",
   "version": "1.0.0",
   "dependencies": {
-    "@supabase/supabase-js": "^2.40.0"
-  }
+    "@supabase/supabase-js": "^2.48.0"
+  },
+  "type": "module"
 }
