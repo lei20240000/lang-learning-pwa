@@ -35,7 +35,7 @@
   <select id="targetLang" class="p-2 border rounded-md text-sm bg-white"></select>
 </div>
 
-<!-- 导航栏：添加点击切换事件，修复页面打不开 -->
+<!-- 导航栏 -->
 <div class="grid grid-cols-5 gap-1 text-lg mb-4 border-b pb-2">
   <button class="nav-btn active py-1" onclick="switchPage('home')">🏠 Home</button>
   <button class="nav-btn py-1" onclick="switchPage('vocab')">📖 Vocab</button>
@@ -44,14 +44,8 @@
   <button class="nav-btn py-1" onclick="switchPage('tiktok')">🎬 TikTok</button>
 </div>
 
-<!-- Home 页 -->
+<!-- Home 页（已删除语音输入功能） -->
 <div id="home" class="page active">
-  <div id="voiceStatus" class="status-box hidden recording">🎤 Recording, tap stop to end</div>
-  <div class="flex gap-2 mb-2">
-    <button onclick="startVoiceRecord()" class="flex-1 p-2 bg-green-100 rounded-lg">🎤 Start Voice</button>
-    <button onclick="stopVoiceRecord()" class="flex-1 p-2 bg-red-100 rounded-lg">⏹️ Stop Voice</button>
-  </div>
-
   <textarea id="text" rows="5" class="w-full p-4 border rounded-xl mb-4 text-xl" placeholder="输入中文..."></textarea>
   <div class="flex gap-3 mb-6">
     <button onclick="processText()" class="flex-1 p-4 bg-blue-600 text-white rounded-xl text-xl font-medium">🌍 Translate</button>
@@ -80,7 +74,7 @@
   <div id="historyList" class="space-y-2 max-h-[500px] overflow-y-auto"></div>
 </div>
 
-<!-- 会员 -->
+<!-- 会员（已改为 Lemon Squeezy 配置） -->
 <div id="member" class="page">
   <div class="bg-gradient-to-r from-blue-500 to-purple-500 text-white p-6 rounded-lg mb-4 text-center">
     <h3 class="text-2xl font-bold">StreamLang Pro</h3>
@@ -89,7 +83,8 @@
   <div class="border p-4 rounded-lg mb-2 bg-white"><p class="font-bold text-lg">Quarterly: $4.99</p></div>
   <div class="border p-4 rounded-lg mb-2 bg-white"><p class="font-bold text-lg">Yearly: $14.99</p></div>
   <div class="border p-4 rounded-lg mb-4 bg-white"><p class="font-bold text-lg">Lifetime: $29.99</p></div>
-  <a href="https://www.paypal.com" target="_blank" class="block w-full p-3 bg-blue-600 text-white rounded-lg text-center text-lg">PayPal</a>
+  <!-- 替换为你的 Lemon Squeezy 支付链接即可 -->
+  <a href="https://kingstream.lemonsqueezy.com/checkout/buy/54eec727-1c41-489d-854e-062134ece2a3" target="_blank" class="block w-full p-3 bg-blue-600 text-white rounded-lg text-center text-lg">Lemon Squeezy</a>
 </div>
 
 <!-- TikTok -->
@@ -108,19 +103,17 @@
       home:"首页",vocab:"单词本",history:"学习历史",member:"会员",tiktok:"TikTok",
       placeholder:"输入中文...",translate:"翻译",read:"朗读",shadow:"影子跟读",challenge:"情境挑战",
       import:"导入",review:"复习",dictate:"听写",save:"保存",
-      voiceStart:"开始语音输入",voiceStop:"停止语音输入",recording:"🎤 录音中，点击停止结束",
       shadowStep:"跟读第{n}/10遍 · {rate}倍速",play:"播放原音",record:"录音",stopRecord:"停止录音",playRecord:"播放录音",
       challenge1:"0.8倍速 × 2遍",challenge2:"1.0倍速 × 2遍",challenge3:"1.0倍速 · 单词空缺",
-      done:"完成！",wordAdded:"单词已添加"
+      done:"完成！",wordAdded:"单词已添加",recording:"🎤 录音中...",recordStop:"录音已停止",noRecord:"无录音可播放"
     },
     en: {
       home:"Home",vocab:"Vocab",history:"History",member:"Pro",tiktok:"TikTok",
       placeholder:"Type Chinese...",translate:"Translate",read:"Read",shadow:"Shadow",challenge:"Scene Challenge",
       import:"Import",review:"Review",dictate:"Dictation",save:"Save",
-      voiceStart:"Start Voice",voiceStop:"Stop Voice",recording:"🎤 Recording, tap stop to end",
       shadowStep:"Shadow {n}/10 · {rate}x",play:"Play",record:"Record",stopRecord:"Stop Record",playRecord:"Play Record",
       challenge1:"0.8x × 2 times",challenge2:"1.0x × 2 times",challenge3:"1.0x · Word Gap",
-      done:"Done!",wordAdded:"Word added"
+      done:"Done!",wordAdded:"Word added",recording:"🎤 Recording...",recordStop:"Recording stopped",noRecord:"No recording"
     }
   };
   const txt = I18N[sysLang];
@@ -136,9 +129,12 @@
   let currentTrans = "", currentLang = "en";
   let vocab = JSON.parse(localStorage.getItem("slVocab"))||[];
   let history = JSON.parse(localStorage.getItem("slHistory"))||[];
-  let voiceRecognition, isRecording = false;
   let shadowStepIndex = 0;
-  let mediaRecorder, audioChunks = [], audioUrl = null;
+  
+  // 录音核心变量（修复后）
+  let mediaRecorder = null;
+  let audioChunks = [];
+  let audioStream = null;
 
   // 跟读10遍固定倍速顺序
   const shadowPlan = [
@@ -153,7 +149,6 @@
   window.onload = () => {
     document.getElementById('text').placeholder = txt.placeholder;
     document.querySelector('button[onclick="processText()"]').textContent = `🌍 ${txt.translate}`;
-    document.getElementById("voiceStatus").textContent = txt.recording;
 
     const sel = document.getElementById("targetLang");
     LANGUAGES.forEach(l=>{const o=document.createElement("option");o.value=l.code;o.textContent=l.code.toUpperCase();sel.appendChild(o)});
@@ -162,38 +157,15 @@
     currentLang = sel.value;
     renderVocab();
     renderHistory();
+    loadDailyQuote();
   };
 
-  // 修复1：页面切换函数，导航可正常点击
+  // 页面切换
   function switchPage(id){
     document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
     document.querySelectorAll(".nav-btn").forEach(b=>b.classList.remove("active"));
     document.getElementById(id).classList.add("active");
     event.target.classList.add("active");
-  }
-
-  // 语音输入手动启停
-  function startVoiceRecord(){
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if(!SpeechRecognition){alert("Not supported");return}
-    if(isRecording)return;
-    
-    voiceRecognition = new SpeechRecognition();
-    voiceRecognition.lang = "zh-CN";
-    voiceRecognition.continuous = true;
-    voiceRecognition.interimResults = false;
-    document.getElementById("voiceStatus").classList.remove("hidden");
-    isRecording = true;
-    window.voiceText = "";
-    voiceRecognition.onresult = e=>{window.voiceText += e.results[0][0].transcript + " "};
-    voiceRecognition.start();
-  }
-  function stopVoiceRecord(){
-    if(!isRecording || !voiceRecognition)return;
-    voiceRecognition.stop();
-    isRecording = false;
-    document.getElementById("voiceStatus").classList.add("hidden");
-    document.getElementById("text").value = window.voiceText || "";
   }
 
   // 翻译
@@ -241,7 +213,7 @@
     })
   }
 
-  // 修复2：跟读添加录音+播放录音按钮
+  // 影子跟读（带正常录音功能）
   function initShadow(){
     if(!currentTrans)return;
     shadowStepIndex = 0;
@@ -259,7 +231,7 @@
     }
     const step = shadowPlan[shadowStepIndex];
     document.getElementById("currentStatus").textContent = txt.shadowStep.replace("{n}",shadowStepIndex+1).replace("{rate}",step.rate);
-    // 新增录音、停止录音、播放录音按钮
+    // 跟读按钮组
     document.getElementById("shadowPlayArea").innerHTML = `
       <button class="play-btn" onclick="playShadowStep()">${txt.play}</button>
       <button class="record-btn" onclick="startRecord()">${txt.record}</button>
@@ -275,25 +247,46 @@
     showShadowStep();
   }
 
-  // 跟读录音功能
-  async function startRecord(){
-    const stream = await navigator.mediaDevices.getUserMedia({audio:true});
-    audioChunks = [];
-    mediaRecorder = new MediaRecorder(stream);
-    mediaRecorder.ondataavailable = e=>audioChunks.push(e.data);
-    mediaRecorder.start();
-  }
-  function stopRecord(){
-    if(mediaRecorder) mediaRecorder.stop();
-  }
-  function playRecord(){
-    if(audioChunks.length===0)return;
-    const blob = new Blob(audioChunks,{type:'audio/wav'});
-    audioUrl = URL.createObjectURL(blob);
-    new Audio(audioUrl).play();
+  // ======================================
+  // 修复：跟读录音/停止/播放（有声音+明显反应）
+  // ======================================
+  async function startRecord() {
+    try {
+      // 获取麦克风权限
+      audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioChunks = [];
+      mediaRecorder = new MediaRecorder(audioStream);
+      
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunks.push(e.data);
+      };
+
+      mediaRecorder.start();
+      document.getElementById("currentStatus").textContent = txt.recording;
+    } catch (err) {
+      alert("请允许麦克风权限");
+    }
   }
 
-  // 修复3：情景挑战（空缺完整单词）
+  function stopRecord() {
+    if (!mediaRecorder || mediaRecorder.state === "inactive") return;
+    mediaRecorder.stop();
+    audioStream.getTracks().forEach(track => track.stop());
+    document.getElementById("currentStatus").textContent = txt.recordStop;
+  }
+
+  function playRecord() {
+    if (audioChunks.length === 0) {
+      alert(txt.noRecord);
+      return;
+    }
+    const audioBlob = new Blob(audioChunks, { type: "audio/wav" });
+    const audioUrl = URL.createObjectURL(audioBlob);
+    const audio = new Audio(audioUrl);
+    audio.play();
+  }
+
+  // 情景挑战
   async function startChallenge(){
     if(!currentTrans)return;
     const st = document.getElementById("currentStatus");
@@ -321,7 +314,7 @@
     return words.map((word, idx)=>idx%2!==0?`<span class="word-gap">____</span>`:word).join(" ");
   }
 
-  // 修复4：点选单词添加到单词本（修复无反应）
+  // 单词点击添加
   function makeWordsClickable(){
     const p=document.getElementById("transSentence");
     p.innerHTML=p.innerText.split(/\s+/).map(w=>`<span class="clickable-word" onclick="addWord(this)">${w}</span>`).join(" ");
@@ -336,7 +329,7 @@
     }
   }
 
-  // 单词本渲染
+  // 单词本
   function importWords(){document.getElementById("vocabArea").classList.toggle("hidden")}
   function saveImport(){
     const ws=document.getElementById("importInput").value.split("\n").filter(x=>x.trim());
@@ -360,7 +353,7 @@
   }
   function delWord(i){vocab.splice(i,1);localStorage.setItem("slVocab",JSON.stringify(vocab));renderVocab()}
 
-  // 学习历史
+  // 历史记录
   function saveHistory(text,trans){
     history.unshift({text,trans,lang:currentLang,time:new Date().toLocaleString()});
     localStorage.setItem("slHistory",JSON.stringify(history));
@@ -383,7 +376,6 @@
     document.getElementById("dailyQuote").innerText=quotes[Math.floor(Math.random()*quotes.length)];
   }
   function saveCard(){alert("Saved!")}
-  loadDailyQuote();
 </script>
 </body>
 </html>
