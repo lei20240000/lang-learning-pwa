@@ -18,7 +18,11 @@
     .recording {background:#fef2f2;border-left:4px solid #ef4444;color:#dc2626}
     .shadow-status {background:#eff6ff;border-left:4px solid #3b82f6;color:#1e40af}
     .challenge-status {background:#faf5ff;border-left:4px solid #8b5cf6;color:#6d28d9}
-    .play-btn{padding:8px 16px;background:#3b82f6;color:white;border-radius:8px;margin-top:8px;border:none;cursor:pointer}
+    .play-btn,.record-btn,.stop-record-btn,.play-record-btn{padding:8px 16px;border-radius:8px;margin:4px;border:none;cursor:pointer}
+    .play-btn{background:#3b82f6;color:white}
+    .record-btn{background:#ef4444;color:white}
+    .stop-record-btn{background:#f59e0b;color:white}
+    .play-record-btn{background:#10b981;color:white}
     .word-gap{color:#6b7280;font-weight:600}
   </style>
 </head>
@@ -31,18 +35,17 @@
   <select id="targetLang" class="p-2 border rounded-md text-sm bg-white"></select>
 </div>
 
-<!-- 导航 -->
+<!-- 导航栏：添加点击切换事件，修复页面打不开 -->
 <div class="grid grid-cols-5 gap-1 text-lg mb-4 border-b pb-2">
-  <button class="nav-btn active py-1" id="nav-home">🏠 Home</button>
-  <button class="nav-btn py-1" id="nav-vocab">📖 Vocab</button>
-  <button class="nav-btn py-1" id="nav-history">📜 History</button>
-  <button class="nav-btn py-1" id="nav-member">👑 Pro</button>
-  <button class="nav-btn py-1" id="nav-tiktok">🎬 TikTok</button>
+  <button class="nav-btn active py-1" onclick="switchPage('home')">🏠 Home</button>
+  <button class="nav-btn py-1" onclick="switchPage('vocab')">📖 Vocab</button>
+  <button class="nav-btn py-1" onclick="switchPage('history')">📜 History</button>
+  <button class="nav-btn py-1" onclick="switchPage('member')">👑 Pro</button>
+  <button class="nav-btn py-1" onclick="switchPage('tiktok')">🎬 TikTok</button>
 </div>
 
 <!-- Home 页 -->
 <div id="home" class="page active">
-  <!-- 语音输入：手动启停 -->
   <div id="voiceStatus" class="status-box hidden recording">🎤 Recording, tap stop to end</div>
   <div class="flex gap-2 mb-2">
     <button onclick="startVoiceRecord()" class="flex-1 p-2 bg-green-100 rounded-lg">🎤 Start Voice</button>
@@ -55,7 +58,7 @@
   </div>
 
   <div id="currentStatus" class="status-box hidden"></div>
-  <div id="shadowPlayArea" class="hidden mb-4"></div>
+  <div id="shadowPlayArea" class="hidden mb-4 flex flex-wrap gap-2"></div>
   <div id="result" class="space-y-4"></div>
 </div>
 
@@ -71,7 +74,7 @@
   <div id="vocabList" class="space-y-2 max-h-[400px] overflow-y-auto"></div>
 </div>
 
-<!-- 历史 -->
+<!-- 学习历史 -->
 <div id="history" class="page">
   <h3 class="text-xl font-bold mb-3">Study History</h3>
   <div id="historyList" class="space-y-2 max-h-[500px] overflow-y-auto"></div>
@@ -95,7 +98,7 @@
     <p id="dailyQuote" class="text-2xl">Daily Sentence</p>
   </div>
   <button onclick="saveCard()" class="w-full p-3 bg-blue-600 text-white rounded-lg mb-2 text-lg">💾 Save Image</button>
-  <a href="https://www.tiktok.com" target="_blank" class="block w-full p-3 bg-black text-white rounded-lg text-lg">📤 Post TikTok</a>
+  <a href="https://www.tiktok.com" target="_blank" class="block w-full p-3 bg-black rounded-lg text-lg text-white py-3">📤 Post TikTok</a>
 </div>
 
 <script>
@@ -106,18 +109,18 @@
       placeholder:"输入中文...",translate:"翻译",read:"朗读",shadow:"影子跟读",challenge:"情境挑战",
       import:"导入",review:"复习",dictate:"听写",save:"保存",
       voiceStart:"开始语音输入",voiceStop:"停止语音输入",recording:"🎤 录音中，点击停止结束",
-      shadowStep:"跟读第{n}/10遍 · {rate}倍速",play:"播放原音",
+      shadowStep:"跟读第{n}/10遍 · {rate}倍速",play:"播放原音",record:"录音",stopRecord:"停止录音",playRecord:"播放录音",
       challenge1:"0.8倍速 × 2遍",challenge2:"1.0倍速 × 2遍",challenge3:"1.0倍速 · 单词空缺",
-      done:"完成！"
+      done:"完成！",wordAdded:"单词已添加"
     },
     en: {
       home:"Home",vocab:"Vocab",history:"History",member:"Pro",tiktok:"TikTok",
       placeholder:"Type Chinese...",translate:"Translate",read:"Read",shadow:"Shadow",challenge:"Scene Challenge",
       import:"Import",review:"Review",dictate:"Dictation",save:"Save",
       voiceStart:"Start Voice",voiceStop:"Stop Voice",recording:"🎤 Recording, tap stop to end",
-      shadowStep:"Shadow {n}/10 · {rate}x",play:"Play Original",
+      shadowStep:"Shadow {n}/10 · {rate}x",play:"Play",record:"Record",stopRecord:"Stop Record",playRecord:"Play Record",
       challenge1:"0.8x × 2 times",challenge2:"1.0x × 2 times",challenge3:"1.0x · Word Gap",
-      done:"Done!"
+      done:"Done!",wordAdded:"Word added"
     }
   };
   const txt = I18N[sysLang];
@@ -132,8 +135,10 @@
 
   let currentTrans = "", currentLang = "en";
   let vocab = JSON.parse(localStorage.getItem("slVocab"))||[];
+  let history = JSON.parse(localStorage.getItem("slHistory"))||[];
   let voiceRecognition, isRecording = false;
   let shadowStepIndex = 0;
+  let mediaRecorder, audioChunks = [], audioUrl = null;
 
   // 跟读10遍固定倍速顺序
   const shadowPlan = [
@@ -146,11 +151,6 @@
   ];
 
   window.onload = () => {
-    document.getElementById('nav-home').textContent = `🏠 ${txt.home}`;
-    document.getElementById('nav-vocab').textContent = `📖 ${txt.vocab}`;
-    document.getElementById('nav-history').textContent = `📜 ${txt.history}`;
-    document.getElementById('nav-member').textContent = `👑 ${txt.member}`;
-    document.getElementById('nav-tiktok').textContent = `🎬 ${txt.tiktok}`;
     document.getElementById('text').placeholder = txt.placeholder;
     document.querySelector('button[onclick="processText()"]').textContent = `🌍 ${txt.translate}`;
     document.getElementById("voiceStatus").textContent = txt.recording;
@@ -161,8 +161,10 @@
     sel.onchange = e=>{localStorage.setItem("slLang",e.target.value);currentLang=e.target.value};
     currentLang = sel.value;
     renderVocab();
+    renderHistory();
   };
 
+  // 修复1：页面切换函数，导航可正常点击
   function switchPage(id){
     document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
     document.querySelectorAll(".nav-btn").forEach(b=>b.classList.remove("active"));
@@ -215,13 +217,12 @@
           </div>
         </div>`;
       makeWordsClickable();
+      saveHistory(t, d.translated);
     }catch(e){alert("Error")}
     document.getElementById("load").style.display="none";
   }
 
-  // ======================================
-  // 修复1：统一语音播放函数，全部有声音
-  // ======================================
+  // 统一语音播放
   function speakText(text){
     window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
@@ -240,7 +241,7 @@
     })
   }
 
-  // 影子跟读初始化+播放按钮
+  // 修复2：跟读添加录音+播放录音按钮
   function initShadow(){
     if(!currentTrans)return;
     shadowStepIndex = 0;
@@ -258,7 +259,13 @@
     }
     const step = shadowPlan[shadowStepIndex];
     document.getElementById("currentStatus").textContent = txt.shadowStep.replace("{n}",shadowStepIndex+1).replace("{rate}",step.rate);
-    document.getElementById("shadowPlayArea").innerHTML = `<button class="play-btn" onclick="playShadowStep()">${txt.play}</button>`;
+    // 新增录音、停止录音、播放录音按钮
+    document.getElementById("shadowPlayArea").innerHTML = `
+      <button class="play-btn" onclick="playShadowStep()">${txt.play}</button>
+      <button class="record-btn" onclick="startRecord()">${txt.record}</button>
+      <button class="stop-record-btn" onclick="stopRecord()">${txt.stopRecord}</button>
+      <button class="play-record-btn" onclick="playRecord()">${txt.playRecord}</button>
+    `;
   }
   async function playShadowStep(){
     const step = shadowPlan[shadowStepIndex];
@@ -268,9 +275,25 @@
     showShadowStep();
   }
 
-  // ======================================
-  // 修复2：情景挑战最后一轮空缺完整单词，非字母
-  // ======================================
+  // 跟读录音功能
+  async function startRecord(){
+    const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+    audioChunks = [];
+    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.ondataavailable = e=>audioChunks.push(e.data);
+    mediaRecorder.start();
+  }
+  function stopRecord(){
+    if(mediaRecorder) mediaRecorder.stop();
+  }
+  function playRecord(){
+    if(audioChunks.length===0)return;
+    const blob = new Blob(audioChunks,{type:'audio/wav'});
+    audioUrl = URL.createObjectURL(blob);
+    new Audio(audioUrl).play();
+  }
+
+  // 修复3：情景挑战（空缺完整单词）
   async function startChallenge(){
     if(!currentTrans)return;
     const st = document.getElementById("currentStatus");
@@ -294,48 +317,73 @@
     st.textContent = txt.done;
     document.getElementById("result").innerHTML = "";
   }
-
-  // 空缺完整单词，而非字母
   function maskFullWords(words){
-    return words.map((word, idx) => {
-      if(idx % 2 === 0) return word;
-      return `<span class="word-gap">____</span>`;
-    }).join(" ");
+    return words.map((word, idx)=>idx%2!==0?`<span class="word-gap">____</span>`:word).join(" ");
   }
 
-  // 单词点选
+  // 修复4：点选单词添加到单词本（修复无反应）
   function makeWordsClickable(){
     const p=document.getElementById("transSentence");
     p.innerHTML=p.innerText.split(/\s+/).map(w=>`<span class="clickable-word" onclick="addWord(this)">${w}</span>`).join(" ");
   }
   function addWord(el){
-    const w=el.innerText.replace(/[.,!?]/g,"");
-    if(!vocab.includes(w)){vocab.push(w);localStorage.setItem("slVocab",JSON.stringify(vocab));renderVocab();}
+    const w=el.innerText.replace(/[.,!?;:]/g,"").trim();
+    if(w && !vocab.includes(w)){
+      vocab.push(w);
+      localStorage.setItem("slVocab",JSON.stringify(vocab));
+      renderVocab();
+      alert(txt.wordAdded);
+    }
   }
 
-  // 单词本
+  // 单词本渲染
   function importWords(){document.getElementById("vocabArea").classList.toggle("hidden")}
   function saveImport(){
-    const ws=document.getElementById("importInput").value.split("\n").filter(x=>x);
+    const ws=document.getElementById("importInput").value.split("\n").filter(x=>x.trim());
     vocab=[...new Set([...vocab,...ws])];
     localStorage.setItem("slVocab",JSON.stringify(vocab));
     renderVocab();
+    document.getElementById("vocabArea").classList.add("hidden");
   }
   function reviewWords(){const w=vocab[Math.floor(Math.random()*vocab.length)];w&&alert(w);}
   function dictationTest(){const w=vocab[Math.floor(Math.random()*vocab.length)];if(w){speakText(w);prompt("Type:")}}
   function renderVocab(){
-    document.getElementById("vocabList").innerHTML=vocab.map((w,i)=>`
+    document.getElementById("vocabList").innerHTML=vocab.length?vocab.map((w,i)=>`
       <div class="flex justify-between border p-3 rounded-lg">
-        <span>${w}</span>
+        <span class="text-lg">${w}</span>
         <div class="flex gap-2">
-          <button onclick="speakText('${w}')" class="p-1 bg-gray-100 rounded-xs">🔊</button>
-          <button onclick="vocab.splice(${i},1);renderVocab();localStorage.setItem('slVocab',JSON.stringify(vocab))" class="p-1 bg-red-100 rounded-xs">🗑️</button>
+          <button onclick="speakText('${w}')" class="p-1 bg-gray-100 rounded-xs text-xs">🔊</button>
+          <button onclick="delWord(${i})" class="p-1 bg-red-100 rounded-xs text-xs">🗑️</button>
         </div>
       </div>
-    `).join("")||"<p class='text-gray-500'>No words</p>";
+    `).join(""):"<p class='text-gray-500'>No words</p>";
+  }
+  function delWord(i){vocab.splice(i,1);localStorage.setItem("slVocab",JSON.stringify(vocab));renderVocab()}
+
+  // 学习历史
+  function saveHistory(text,trans){
+    history.unshift({text,trans,lang:currentLang,time:new Date().toLocaleString()});
+    localStorage.setItem("slHistory",JSON.stringify(history));
+    renderHistory();
+  }
+  function renderHistory(){
+    document.getElementById("historyList").innerHTML=history.map(h=>`
+      <div class="border p-3 rounded-lg">
+        <p class="text-sm text-gray-500">${h.time}</p>
+        <p class="text-sm">${h.text}</p>
+        <p class="text-blue-600 text-lg mt-1">${h.trans}</p>
+        <button onclick="speakText('${h.trans}')" class="text-xs p-1 bg-gray-100 rounded-md mt-1">${txt.read}</button>
+      </div>
+    `).join("");
   }
 
+  // TikTok
+  function loadDailyQuote(){
+    const quotes=["Practice makes perfect.","Never too old to learn.","Keep going, you're doing great!","Every day is a new chance to learn."];
+    document.getElementById("dailyQuote").innerText=quotes[Math.floor(Math.random()*quotes.length)];
+  }
   function saveCard(){alert("Saved!")}
+  loadDailyQuote();
 </script>
 </body>
 </html>
