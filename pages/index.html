@@ -14,7 +14,10 @@
     .page {display:none}
     .page.active {display:block}
     .nav-btn.active {font-weight:bold;color:#3b82f6;border-bottom:2px solid #3b82f6}
-    .shadow-stage {background:#eff6ff;border-left:4px solid #3b82f6;padding:12px;border-radius:8px;margin:8px 0}
+    .status-box {padding:12px 16px;border-radius:10px;margin-bottom:12px;font-weight:600}
+    .recording {background:#fef2f2;border-left:4px solid #ef4444;color:#dc2626}
+    .shadow-status {background:#eff6ff;border-left:4px solid #3b82f6;color:#1e40af}
+    .challenge-status {background:#faf5ff;border-left:4px solid #8b5cf6;color:#6d28d9}
   </style>
 </head>
 <body class="p-4 bg-gray-50 max-w-2xl mx-auto">
@@ -36,15 +39,20 @@
 </div>
 
 <!-- ======================================
-✅ 修复后的Home页（无下拉框+语音可用+专业跟读）
+✅ 修复后的Home页（语音可用+跟读间隔+动态提示）
 ====================================== -->
 <div id="home" class="page active">
-  <!-- 🔥 已删除「Daily日常挑战」下拉框 -->
+  <!-- 语音输入状态提示 -->
+  <div id="voiceStatus" class="status-box hidden recording">🎤 正在录音，请说话...</div>
+  
   <textarea id="text" rows="5" class="w-full p-4 border rounded-xl mb-4 text-xl" placeholder="输入中文..."></textarea>
   <div class="flex gap-3 mb-6">
-    <button onclick="startVoice()" class="flex-1 p-4 bg-gray-100 rounded-xl text-xl font-medium">🎤 Voice</button>
-    <button onclick="processText()" class="flex-1 p-4 bg-blue-600 text-white rounded-xl text-xl font-medium">🌍 Translate</button>
+    <button onclick="startVoice()" class="flex-1 p-4 bg-gray-100 rounded-xl text-xl font-medium">🎤 语音输入</button>
+    <button onclick="processText()" class="flex-1 p-4 bg-blue-600 text-white rounded-xl text-xl font-medium">🌍 翻译</button>
   </div>
+
+  <!-- 动态状态提示框（仅显示当前阶段） -->
+  <div id="currentStatus" class="status-box hidden"></div>
   <div id="result" class="space-y-4"></div>
 </div>
 
@@ -97,8 +105,11 @@
       read:"朗读", shadow:"跟读10遍", challenge:"情境挑战",
       import:"导入单词", review:"智能复习", dictate:"听写测试", save:"保存",
       trial:"7天免费试用", paypal:"PayPal 支付", saveCard:"保存图片", postTikTok:"发布 TikTok",
-      voiceNotSupport:"您的浏览器不支持语音输入", shadowStage1:"慢速跟读 (0.6x)", shadowStage2:"中速跟读 (0.8x)", shadowStage3:"正常速跟读 (1.0x)",
-      challengeStage1:"第1轮：慢速全字幕跟读", challengeStage2:"第2轮：中速半隐字幕", challengeStage3:"第3轮：正常速无字幕挑战", challengeComplete:"挑战完成！太棒了！"
+      voiceNotSupport:"您的浏览器不支持语音输入", voicePermit:"请允许麦克风权限以使用语音输入",
+      shadowStage1:"慢速跟读 (0.6x) 第{current}/{total}次", shadowStage2:"中速跟读 (0.8x) 第{current}/{total}次", shadowStage3:"正常速跟读 (1.0x) 第{current}/{total}次",
+      shadowComplete:"跟读完成！已为您播放跟读录音", playRecord:"播放我的跟读",
+      challengeStage1:"第1轮：慢速全字幕跟读", challengeStage2:"第2轮：中速半隐字幕", challengeStage3:"第3轮：正常速无字幕挑战",
+      challengeComplete:"挑战完成！太棒了！", recording:"🎤 正在录音，请说话..."
     },
     en: {
       home:"🏠 Home", vocab:"📖 Vocab", history:"📜 History", member:"👑 Pro", tiktok:"🎬 TikTok",
@@ -106,8 +117,11 @@
       read:"Read", shadow:"Shadow×10", challenge:"Scene Challenge",
       import:"Import", review:"Review", dictate:"Dictation", save:"Save",
       trial:"7 Days Free Trial", paypal:"PayPal Checkout", saveCard:"Save Image", postTikTok:"Post TikTok",
-      voiceNotSupport:"Voice input not supported in your browser", shadowStage1:"Slow Shadow (0.6x)", shadowStage2:"Medium Shadow (0.8x)", shadowStage3:"Normal Shadow (1.0x)",
-      challengeStage1:"Round 1: Slow with Full Subtitles", challengeStage2:"Round 2: Medium with Half Subtitles", challengeStage3:"Round 3: Normal with No Subtitles", challengeComplete:"Challenge Complete! Great job!"
+      voiceNotSupport:"Voice input not supported in your browser", voicePermit:"Please allow microphone access for voice input",
+      shadowStage1:"Slow Shadow (0.6x) {current}/{total}", shadowStage2:"Medium Shadow (0.8x) {current}/{total}", shadowStage3:"Normal Shadow (1.0x) {current}/{total}",
+      shadowComplete:"Shadow Complete! Playing your recording", playRecord:"Play My Recording",
+      challengeStage1:"Round 1: Slow with Full Subtitles", challengeStage2:"Round 2: Medium with Half Subtitles", challengeStage3:"Round 3: Normal with No Subtitles",
+      challengeComplete:"Challenge Complete! Great job!", recording:"🎤 Recording, please speak..."
     }
   };
   const txt = I18N[sysLang];
@@ -126,6 +140,9 @@
   let vocab = JSON.parse(localStorage.getItem("slVocab"))||[];
   let history = JSON.parse(localStorage.getItem("slHistory"))||[];
   let shadowTimer = null;
+  let mediaRecorder = null;
+  let audioChunks = [];
+  let shadowRecordings = [];
 
   // 初始化界面文字
   window.onload = ()=>{
@@ -171,9 +188,16 @@
   }
 
   // ======================================
-  // ✅ 修复1：Voice语音输入100%可用
+  // ✅ 修复1：语音输入100%可用（权限+状态+兼容性）
   // ======================================
-  function startVoice(){
+  async function startVoice(){
+    const voiceStatus = document.getElementById("voiceStatus");
+    // 权限检查
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+      alert(txt.voiceNotSupport);
+      return;
+    }
+
     // 兼容所有主流浏览器
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
@@ -181,20 +205,41 @@
       return;
     }
 
+    // 请求麦克风权限
+    try{
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+    }catch(err){
+      alert(txt.voicePermit);
+      return;
+    }
+
     const recognition = new SpeechRecognition();
-    recognition.lang = "zh-CN"; // 固定识别中文，符合输入需求
+    recognition.lang = "zh-CN";
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
 
-    // 识别成功
-    recognition.onresult = (event) => {
-      const transcript = event.results[0][0].transcript;
-      document.getElementById("text").value = transcript;
+    // 录音开始：显示状态
+    recognition.onstart = ()=>{
+      voiceStatus.textContent = txt.recording;
+      voiceStatus.classList.remove("hidden");
     };
 
-    // 识别错误
-    recognition.onerror = (event) => {
-      console.error("语音识别错误:", event.error);
+    // 识别成功：填入输入框
+    recognition.onresult = (event)=>{
+      const transcript = event.results[0][0].transcript;
+      document.getElementById("text").value = transcript;
+      voiceStatus.classList.add("hidden");
+    };
+
+    // 识别结束：隐藏状态
+    recognition.onend = ()=>{
+      voiceStatus.classList.add("hidden");
+    };
+
+    // 错误处理
+    recognition.onerror = (event)=>{
+      voiceStatus.classList.add("hidden");
+      console.error("语音错误:", event.error);
       alert(txt.voiceNotSupport);
     };
 
@@ -210,6 +255,8 @@
     currentText = text;
     document.getElementById("load").style.display="flex";
     document.getElementById("result").innerHTML = "";
+    document.getElementById("currentStatus").classList.add("hidden");
+    shadowRecordings = [];
 
     try {
       const res = await fetch("/api/ai-process", {
@@ -244,96 +291,138 @@
   }
 
   // ======================================
-  // ✅ 修复2：专业影子跟读10遍（分阶段+倍速+间隔）
+  // ✅ 修复2：专业影子跟读（间隔+录音+动态提示）
   // ======================================
   async function startShadowRead(sentence){
     clearInterval(shadowTimer);
-    // 分3阶段，总10次，带倍速+间隔
+    shadowRecordings = [];
+    const statusBox = document.getElementById("currentStatus");
+    statusBox.className = "status-box shadow-status";
+    statusBox.classList.remove("hidden");
+
+    // 3阶段渐进跟读（总10次，带间隔+录音）
     const stages = [
-      { rate: 0.6, times: 2, interval: 3000, label: txt.shadowStage1 },
-      { rate: 0.8, times: 5, interval: 2500, label: txt.shadowStage2 },
-      { rate: 1.0, times: 3, interval: 2000, label: txt.shadowStage3 }
+      { rate: 0.6, times: 2, interval: 3500, label: txt.shadowStage1 },
+      { rate: 0.8, times: 5, interval: 3000, label: txt.shadowStage2 },
+      { rate: 1.0, times: 3, interval: 2500, label: txt.shadowStage3 }
     ];
 
-    const resultBox = document.getElementById("result");
     let stageIndex = 0;
     let timeIndex = 0;
+    const totalTimes = stages.reduce((sum, s)=>sum + s.times, 0);
 
-    // 显示阶段提示
-    resultBox.innerHTML += `<div class="shadow-stage"><p class="font-medium">${stages[stageIndex].label}</p></div>`;
+    // 初始化录音
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaRecorder = new MediaRecorder(stream);
+    audioChunks = [];
+    mediaRecorder.ondataavailable = (e)=>audioChunks.push(e.data);
 
-    // 递归播放
+    // 递归播放+录音
     async function playNext(){
-      if(stageIndex >= stages.length) return;
-      const stage = stages[stageIndex];
+      if(stageIndex >= stages.length){
+        // 跟读完成：合并录音并播放
+        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const audio = new Audio(audioUrl);
+        statusBox.textContent = txt.shadowComplete;
+        // 添加播放按钮
+        statusBox.innerHTML += `<br><button onclick="audio.play()" class="mt-2 p-2 bg-blue-600 text-white rounded-lg text-sm">${txt.playRecord}</button>`;
+        mediaRecorder.stop();
+        stream.getTracks().forEach(track=>track.stop());
+        return;
+      }
 
-      // 播放当前次
+      const stage = stages[stageIndex];
+      // 更新当前状态（仅显示当前阶段）
+      statusBox.textContent = stage.label.replace("{current}", timeIndex+1).replace("{total}", stage.times);
+
+      // 1. 播放原音
       const utter = new SpeechSynthesisUtterance(sentence);
       utter.lang = currentLang;
-      utter.rate = stage.rate; // 控制倍速
+      utter.rate = stage.rate;
       speechSynthesis.speak(utter);
 
-      // 等待间隔+下一次
-      await new Promise(resolve => setTimeout(resolve, stage.interval));
-      timeIndex++;
+      // 2. 原音播放完，开始录用户跟读（3秒间隔）
+      await new Promise(resolve=>setTimeout(resolve, 1500));
+      mediaRecorder.start();
+      await new Promise(resolve=>setTimeout(resolve, 2000)); // 2秒录音时间
+      mediaRecorder.stop();
 
+      // 3. 等待间隔，进入下一次
+      await new Promise(resolve=>setTimeout(resolve, stage.interval - 3500));
+
+      timeIndex++;
       // 阶段完成，进入下一个
       if(timeIndex >= stage.times){
         stageIndex++;
         timeIndex = 0;
-        if(stageIndex < stages.length){
-          resultBox.innerHTML += `<div class="shadow-stage"><p class="font-medium">${stages[stageIndex].label}</p></div>`;
-        }
       }
 
-      // 继续播放
-      if(stageIndex < stages.length || timeIndex < stage.times){
-        playNext();
-      }
+      // 继续下一次
+      playNext();
     }
 
     playNext();
   }
 
   // ======================================
-  // ✅ 修复3：全新情景挑战（3轮渐进，适配外国人）
+  // ✅ 修复3：全新情景挑战（间隔+动态提示+无堆内容）
   // ======================================
   async function startSceneChallenge(sentence){
     clearInterval(shadowTimer);
-    const words = sentence.split(/\s+/);
-    const resultBox = document.getElementById("result");
-    resultBox.innerHTML = "";
+    const statusBox = document.getElementById("currentStatus");
+    statusBox.className = "status-box challenge-status";
+    statusBox.classList.remove("hidden");
+    document.getElementById("result").innerHTML = "";
 
-    // 3轮挑战
+    const words = sentence.split(/\s+/);
+    // 3轮渐进挑战（带间隔+动态提示）
     const rounds = [
-      { rate: 0.6, subtitle: sentence, label: txt.challengeStage1 },
-      { rate: 0.8, subtitle: words.map(w => w[0] + "▯".repeat(w.length-1)).join(" "), label: txt.challengeStage2 },
-      { rate: 1.0, subtitle: "", label: txt.challengeStage3 }
+      { 
+        rate: 0.6, 
+        subtitle: sentence, 
+        label: txt.challengeStage1,
+        interval: 4000
+      },
+      { 
+        rate: 0.8, 
+        subtitle: words.map(w => w[0] + "▯".repeat(Math.max(w.length-2, 0)) + (w[w.length-1] || "")).join(" "), 
+        label: txt.challengeStage2,
+        interval: 4000
+      },
+      { 
+        rate: 1.0, 
+        subtitle: "", 
+        label: txt.challengeStage3,
+        interval: 4000
+      }
     ];
 
-    // 逐轮执行
+    // 逐轮执行（仅显示当前轮次）
     for(let i=0; i<rounds.length; i++){
       const round = rounds[i];
-      // 显示当前轮次+字幕
-      resultBox.innerHTML += `
-        <div class="shadow-stage">
-          <p class="font-bold text-lg">${round.label}</p>
-          <p class="text-xl mt-2">${round.subtitle}</p>
+      // 更新当前轮次提示（仅显示当前）
+      statusBox.textContent = round.label;
+      // 显示当前轮次字幕
+      document.getElementById("result").innerHTML = `
+        <div class="border p-6 rounded-xl bg-white">
+          <p class="text-xl text-blue-600">${round.subtitle}</p>
         </div>
       `;
 
-      // 播放音频
+      // 播放原音
       const utter = new SpeechSynthesisUtterance(sentence);
       utter.lang = currentLang;
       utter.rate = round.rate;
       speechSynthesis.speak(utter);
 
-      // 等待间隔，进入下一轮
-      await new Promise(resolve => setTimeout(resolve, 4000));
+      // 等待间隔（给用户跟读时间）
+      await new Promise(resolve => setTimeout(resolve, round.interval));
     }
 
-    // 挑战完成提示
-    resultBox.innerHTML += `<div class="bg-green-50 p-4 rounded-lg mt-4 text-center"><p class="text-xl font-bold text-green-600">${txt.challengeComplete}</p></div>`;
+    // 挑战完成
+    statusBox.textContent = txt.challengeComplete;
+    document.getElementById("result").innerHTML = "";
   }
 
   // ======================================
