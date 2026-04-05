@@ -18,18 +18,20 @@
     .recording {background:#fef2f2;border-left:4px solid #ef4444;color:#dc2626}
     .shadow-status {background:#eff6ff;border-left:4px solid #3b82f6;color:#1e40af}
     .challenge-status {background:#faf5ff;border-left:4px solid #8b5cf6;color:#6d28d9}
+    .word-blur {color:#6b7280;font-weight:600}
+    .play-btn{@apply px-4 py-2 bg-blue-600 text-white rounded-lg mt-2}
   </style>
 </head>
 <body class="p-4 bg-gray-50 max-w-2xl mx-auto">
 <div class="loading" id="load"><div class="spin"></div></div>
 
-<!-- 顶部品牌+语言选择 -->
+<!-- 顶部 -->
 <div class="flex justify-between items-center mb-4">
   <h1 class="text-3xl font-bold text-blue-600">StreamLang</h1>
   <select id="targetLang" class="p-2 border rounded-md text-sm bg-white"></select>
 </div>
 
-<!-- 导航栏 -->
+<!-- 导航 -->
 <div class="grid grid-cols-5 gap-1 text-lg mb-4 border-b pb-2">
   <button class="nav-btn active py-1" id="nav-home">🏠 Home</button>
   <button class="nav-btn py-1" id="nav-vocab">📖 Vocab</button>
@@ -38,25 +40,26 @@
   <button class="nav-btn py-1" id="nav-tiktok">🎬 TikTok</button>
 </div>
 
-<!-- ======================================
-✅ 修复后的Home页（语音可用+跟读间隔+动态提示）
-====================================== -->
+<!-- Home 页 -->
 <div id="home" class="page active">
-  <!-- 语音输入状态提示 -->
-  <div id="voiceStatus" class="status-box hidden recording">🎤 正在录音，请说话...</div>
-  
-  <textarea id="text" rows="5" class="w-full p-4 border rounded-xl mb-4 text-xl" placeholder="输入中文..."></textarea>
-  <div class="flex gap-3 mb-6">
-    <button onclick="startVoice()" class="flex-1 p-4 bg-gray-100 rounded-xl text-xl font-medium">🎤 语音输入</button>
-    <button onclick="processText()" class="flex-1 p-4 bg-blue-600 text-white rounded-xl text-xl font-medium">🌍 翻译</button>
+  <!-- 语音输入：手动启停 -->
+  <div id="voiceStatus" class="status-box hidden recording">🎤 Recording, tap stop to end</div>
+  <div class="flex gap-2 mb-2">
+    <button onclick="startVoiceRecord()" class="flex-1 p-2 bg-green-100 rounded-lg">🎤 Start Voice</button>
+    <button onclick="stopVoiceRecord()" class="flex-1 p-2 bg-red-100 rounded-lg">⏹️ Stop Voice</button>
   </div>
 
-  <!-- 动态状态提示框（仅显示当前阶段） -->
+  <textarea id="text" rows="5" class="w-full p-4 border rounded-xl mb-4 text-xl" placeholder="输入中文..."></textarea>
+  <div class="flex gap-3 mb-6">
+    <button onclick="processText()" class="flex-1 p-4 bg-blue-600 text-white rounded-xl text-xl font-medium">🌍 Translate</button>
+  </div>
+
   <div id="currentStatus" class="status-box hidden"></div>
+  <div id="shadowPlayArea" class="hidden mb-4"></div>
   <div id="result" class="space-y-4"></div>
 </div>
 
-<!-- 单词本页 -->
+<!-- 单词本 -->
 <div id="vocab" class="page">
   <h3 class="text-xl font-bold mb-3">My Vocabulary</h3>
   <div class="flex gap-2 mb-3">
@@ -68,13 +71,13 @@
   <div id="vocabList" class="space-y-2 max-h-[400px] overflow-y-auto"></div>
 </div>
 
-<!-- 历史页 -->
+<!-- 历史 -->
 <div id="history" class="page">
   <h3 class="text-xl font-bold mb-3">Study History</h3>
   <div id="historyList" class="space-y-2 max-h-[500px] overflow-y-auto"></div>
 </div>
 
-<!-- 会员页 -->
+<!-- 会员 -->
 <div id="member" class="page">
   <div class="bg-gradient-to-r from-blue-500 to-purple-500 text-white p-6 rounded-lg mb-4 text-center">
     <h3 class="text-2xl font-bold">StreamLang Pro</h3>
@@ -83,50 +86,42 @@
   <div class="border p-4 rounded-lg mb-2 bg-white"><p class="font-bold text-lg">Quarterly: $4.99</p></div>
   <div class="border p-4 rounded-lg mb-2 bg-white"><p class="font-bold text-lg">Yearly: $14.99</p></div>
   <div class="border p-4 rounded-lg mb-4 bg-white"><p class="font-bold text-lg">Lifetime: $29.99</p></div>
-  <a href="https://www.paypal.com" target="_blank" class="block w-full p-3 bg-blue-600 text-white rounded-lg text-center text-lg">PayPal Checkout</a>
+  <a href="https://www.paypal.com" target="_blank" class="block w-full p-3 bg-blue-600 text-white rounded-lg text-center text-lg">PayPal</a>
 </div>
 
-<!-- TikTok页 -->
+<!-- TikTok -->
 <div id="tiktok" class="page text-center">
   <div class="bg-gradient-to-r from-blue-500 to-purple-500 text-white p-8 rounded-lg mb-4">
     <p id="dailyQuote" class="text-2xl">Daily Sentence</p>
   </div>
   <button onclick="saveCard()" class="w-full p-3 bg-blue-600 text-white rounded-lg mb-2 text-lg">💾 Save Image</button>
-  <a href="https://www.tiktok.com" target="_blank" class="block w-full p-3 bg-black text-white rounded-lg text-lg">📤 Post to TikTok</a>
+  <a href="https://www.tiktok.com" target="_blank" class="block w-full p-3 bg-black text-white rounded-lg text-lg">📤 Post TikTok</a>
 </div>
 
 <script>
-  // 🔥 系统语言自动适配（中/英）
   const sysLang = navigator.language.startsWith('zh') ? 'zh' : 'en';
   const I18N = {
     zh: {
-      home:"🏠 首页", vocab:"📖 单词本", history:"📜 学习历史", member:"👑 会员", tiktok:"🎬 TikTok",
-      placeholder:"输入中文...", voice:"语音输入", translate:"翻译",
-      read:"朗读", shadow:"跟读10遍", challenge:"情境挑战",
-      import:"导入单词", review:"智能复习", dictate:"听写测试", save:"保存",
-      trial:"7天免费试用", paypal:"PayPal 支付", saveCard:"保存图片", postTikTok:"发布 TikTok",
-      voiceNotSupport:"您的浏览器不支持语音输入", voicePermit:"请允许麦克风权限以使用语音输入",
-      shadowStage1:"慢速跟读 (0.6x) 第{current}/{total}次", shadowStage2:"中速跟读 (0.8x) 第{current}/{total}次", shadowStage3:"正常速跟读 (1.0x) 第{current}/{total}次",
-      shadowComplete:"跟读完成！已为您播放跟读录音", playRecord:"播放我的跟读",
-      challengeStage1:"第1轮：慢速全字幕跟读", challengeStage2:"第2轮：中速半隐字幕", challengeStage3:"第3轮：正常速无字幕挑战",
-      challengeComplete:"挑战完成！太棒了！", recording:"🎤 正在录音，请说话..."
+      home:"首页",vocab:"单词本",history:"学习历史",member:"会员",tiktok:"TikTok",
+      placeholder:"输入中文...",translate:"翻译",read:"朗读",shadow:"影子跟读",challenge:"情境挑战",
+      import:"导入",review:"复习",dictate:"听写",save:"保存",
+      voiceStart:"开始语音输入",voiceStop:"停止语音输入",recording:"🎤 录音中，点击停止结束",
+      shadowStep:"跟读第{n}/10遍 · {rate}倍速",play:"播放原音",
+      challenge1:"0.8倍速 × 2遍",challenge2:"1.0倍速 × 2遍",challenge3:"1.0倍速 · 单词空缺",
+      done:"完成！"
     },
     en: {
-      home:"🏠 Home", vocab:"📖 Vocab", history:"📜 History", member:"👑 Pro", tiktok:"🎬 TikTok",
-      placeholder:"Type Chinese...", voice:"Voice", translate:"Translate",
-      read:"Read", shadow:"Shadow×10", challenge:"Scene Challenge",
-      import:"Import", review:"Review", dictate:"Dictation", save:"Save",
-      trial:"7 Days Free Trial", paypal:"PayPal Checkout", saveCard:"Save Image", postTikTok:"Post TikTok",
-      voiceNotSupport:"Voice input not supported in your browser", voicePermit:"Please allow microphone access for voice input",
-      shadowStage1:"Slow Shadow (0.6x) {current}/{total}", shadowStage2:"Medium Shadow (0.8x) {current}/{total}", shadowStage3:"Normal Shadow (1.0x) {current}/{total}",
-      shadowComplete:"Shadow Complete! Playing your recording", playRecord:"Play My Recording",
-      challengeStage1:"Round 1: Slow with Full Subtitles", challengeStage2:"Round 2: Medium with Half Subtitles", challengeStage3:"Round 3: Normal with No Subtitles",
-      challengeComplete:"Challenge Complete! Great job!", recording:"🎤 Recording, please speak..."
+      home:"Home",vocab:"Vocab",history:"History",member:"Pro",tiktok:"TikTok",
+      placeholder:"Type Chinese...",translate:"Translate",read:"Read",shadow:"Shadow",challenge:"Scene Challenge",
+      import:"Import",review:"Review",dictate:"Dictation",save:"Save",
+      voiceStart:"Start Voice",voiceStop:"Stop Voice",recording:"🎤 Recording, tap stop to end",
+      shadowStep:"Shadow {n}/10 · {rate}x",play:"Play Original",
+      challenge1:"0.8x × 2 times",challenge2:"1.0x × 2 times",challenge3:"1.0x · Word Blur",
+      done:"Done!"
     }
   };
   const txt = I18N[sysLang];
 
-  // 20种目标语言
   const LANGUAGES = [
     {code:"en",name:"English"},{code:"es",name:"Spanish"},{code:"fr",name:"French"},{code:"de",name:"German"},
     {code:"ja",name:"Japanese"},{code:"ko",name:"Korean"},{code:"ru",name:"Russian"},{code:"pt",name:"Portuguese"},
@@ -135,51 +130,40 @@
     {code:"da",name:"Danish"},{code:"pl",name:"Polish"},{code:"cs",name:"Czech"},{code:"el",name:"Greek"}
   ];
 
-  // 全局变量
-  let currentText = "", currentLang = "en", currentTrans = "";
+  let currentTrans = "", currentLang = "en";
   let vocab = JSON.parse(localStorage.getItem("slVocab"))||[];
   let history = JSON.parse(localStorage.getItem("slHistory"))||[];
-  let shadowTimer = null;
-  let mediaRecorder = null;
-  let audioChunks = [];
-  let shadowRecordings = [];
+  let voiceRecognition, isRecording = false;
+  let shadowStepIndex = 0;
 
-  // 初始化界面文字
-  window.onload = ()=>{
-    // 导航栏文字
-    document.getElementById('nav-home').textContent=txt.home;
-    document.getElementById('nav-vocab').textContent=txt.vocab;
-    document.getElementById('nav-history').textContent=txt.history;
-    document.getElementById('nav-member').textContent=txt.member;
-    document.getElementById('nav-tiktok').textContent=txt.tiktok;
-    // 输入框占位符
+  // 跟读10遍固定倍速顺序（严格按要求）
+  const shadowPlan = [
+    {rate:0.6},{rate:0.6},
+    {rate:0.8},{rate:0.8},
+    {rate:1.0},
+    {rate:0.6},
+    {rate:0.8},{rate:0.8},
+    {rate:1.0},{rate:1.0}
+  ];
+
+  window.onload = () => {
+    document.getElementById('nav-home').textContent = `🏠 ${txt.home}`;
+    document.getElementById('nav-vocab').textContent = `📖 ${txt.vocab}`;
+    document.getElementById('nav-history').textContent = `📜 ${txt.history}`;
+    document.getElementById('nav-member').textContent = `👑 ${txt.member}`;
+    document.getElementById('nav-tiktok').textContent = `🎬 ${txt.tiktok}`;
     document.getElementById('text').placeholder = txt.placeholder;
-    // 按钮文字
-    document.querySelector('button[onclick="startVoice()"]').textContent = `🎤 ${txt.voice}`;
     document.querySelector('button[onclick="processText()"]').textContent = `🌍 ${txt.translate}`;
+    document.getElementById("voiceStatus").textContent = txt.recording;
 
-    // 语言选择器
     const sel = document.getElementById("targetLang");
-    LANGUAGES.forEach(l=>{
-      const o = document.createElement("option");
-      o.value = l.code;
-      o.textContent = l.code.toUpperCase();
-      sel.appendChild(o);
-    });
+    LANGUAGES.forEach(l=>{const o=document.createElement("option");o.value=l.code;o.textContent=l.code.toUpperCase();sel.appendChild(o)});
     sel.value = localStorage.getItem("slLang")||"en";
-    sel.onchange = e=>{
-      localStorage.setItem("slLang",e.target.value);
-      currentLang = e.target.value;
-    };
+    sel.onchange = e=>{localStorage.setItem("slLang",e.target.value);currentLang=e.target.value};
     currentLang = sel.value;
-
-    // 渲染单词本/历史
     renderVocab();
-    renderHistory();
-    loadDailyQuote();
   };
 
-  // 页面切换
   function switchPage(id){
     document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
     document.querySelectorAll(".nav-btn").forEach(b=>b.classList.remove("active"));
@@ -187,348 +171,171 @@
     event.target.classList.add("active");
   }
 
-  // ======================================
-  // ✅ 修复1：语音输入100%可用（权限+状态+兼容性）
-  // ======================================
-  async function startVoice(){
-    const voiceStatus = document.getElementById("voiceStatus");
-    // 权限检查
-    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
-      alert(txt.voiceNotSupport);
-      return;
-    }
-
-    // 兼容所有主流浏览器
+  // 语音输入：手动启停
+  function startVoiceRecord(){
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      alert(txt.voiceNotSupport);
-      return;
-    }
+    if(!SpeechRecognition){alert("Not supported");return}
+    if(isRecording)return;
+    
+    voiceRecognition = new SpeechRecognition();
+    voiceRecognition.lang = "zh-CN";
+    voiceRecognition.continuous = true;
+    voiceRecognition.interimResults = false;
 
-    // 请求麦克风权限
-    try{
-      await navigator.mediaDevices.getUserMedia({ audio: true });
-    }catch(err){
-      alert(txt.voicePermit);
-      return;
-    }
-
-    const recognition = new SpeechRecognition();
-    recognition.lang = "zh-CN";
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
-
-    // 录音开始：显示状态
-    recognition.onstart = ()=>{
-      voiceStatus.textContent = txt.recording;
-      voiceStatus.classList.remove("hidden");
-    };
-
-    // 识别成功：填入输入框
-    recognition.onresult = (event)=>{
-      const transcript = event.results[0][0].transcript;
-      document.getElementById("text").value = transcript;
-      voiceStatus.classList.add("hidden");
-    };
-
-    // 识别结束：隐藏状态
-    recognition.onend = ()=>{
-      voiceStatus.classList.add("hidden");
-    };
-
-    // 错误处理
-    recognition.onerror = (event)=>{
-      voiceStatus.classList.add("hidden");
-      console.error("语音错误:", event.error);
-      alert(txt.voiceNotSupport);
-    };
-
-    recognition.start();
+    document.getElementById("voiceStatus").classList.remove("hidden");
+    isRecording = true;
+    window.voiceText = "";
+    voiceRecognition.onresult = e=>{window.voiceText += e.results[0][0].transcript + " "};
+    voiceRecognition.start();
   }
 
-  // ======================================
-  // 核心翻译功能
-  // ======================================
+  function stopVoiceRecord(){
+    if(!isRecording || !voiceRecognition)return;
+    voiceRecognition.stop();
+    isRecording = false;
+    document.getElementById("voiceStatus").classList.add("hidden");
+    document.getElementById("text").value = window.voiceText || "";
+  }
+
+  // 翻译
   async function processText(){
-    const text = document.getElementById("text").value.trim();
-    if(!text) return;
-    currentText = text;
+    const t = document.getElementById("text").value.trim();if(!t)return;
     document.getElementById("load").style.display="flex";
-    document.getElementById("result").innerHTML = "";
-    document.getElementById("currentStatus").classList.add("hidden");
-    shadowRecordings = [];
-
-    try {
-      const res = await fetch("/api/ai-process", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({text, lang: currentLang})
+    try{
+      const r = await fetch("/api/ai-process",{
+        method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({text:t,lang:currentLang})
       });
-      const data = await res.json();
-      currentTrans = data.translated;
-
-      // 渲染翻译结果+功能按钮
-      document.getElementById("result").innerHTML = `
+      const d = await r.json(); currentTrans = d.translated;
+      document.getElementById("result").innerHTML=`
         <div class="border p-6 rounded-xl bg-white">
-          <p id="transSentence" class="text-xl text-blue-600 mb-4">${data.translated}</p>
+          <p id="transSentence" class="text-xl text-blue-600 mb-4">${d.translated}</p>
           <div class="flex gap-3 flex-wrap">
-            <button onclick="speak('${data.translated}')" class="p-3 bg-gray-100 rounded-lg text-lg font-medium">${txt.read}</button>
-            <button onclick="startShadowRead('${data.translated}')" class="p-3 bg-blue-100 rounded-lg text-lg font-medium">${txt.shadow}</button>
-            <button onclick="startSceneChallenge('${data.translated}')" class="p-3 bg-purple-100 rounded-lg text-lg font-medium">${txt.challenge}</button>
+            <button onclick="speak('${d.translated}')" class="p-3 bg-gray-100 rounded-lg">${txt.read}</button>
+            <button onclick="initShadow()" class="p-3 bg-blue-100 rounded-lg">${txt.shadow}</button>
+            <button onclick="startChallenge()" class="p-3 bg-purple-100 rounded-lg">${txt.challenge}</button>
           </div>
-        </div>
-      `;
-
-      // 单词可点击
+        </div>`;
       makeWordsClickable();
-      // 保存历史
-      saveHistory(text, data.translated);
-    } catch (err) {
-      alert("Error: " + err.message);
-    } finally {
-      document.getElementById("load").style.display = "none";
-    }
+    }catch(e){alert("Error")}
+    document.getElementById("load").style.display="none";
   }
 
-  // ======================================
-  // ✅ 修复2：专业影子跟读（间隔+录音+动态提示）
-  // ======================================
-  async function startShadowRead(sentence){
-    clearInterval(shadowTimer);
-    shadowRecordings = [];
-    const statusBox = document.getElementById("currentStatus");
-    statusBox.className = "status-box shadow-status";
-    statusBox.classList.remove("hidden");
-
-    // 3阶段渐进跟读（总10次，带间隔+录音）
-    const stages = [
-      { rate: 0.6, times: 2, interval: 3500, label: txt.shadowStage1 },
-      { rate: 0.8, times: 5, interval: 3000, label: txt.shadowStage2 },
-      { rate: 1.0, times: 3, interval: 2500, label: txt.shadowStage3 }
-    ];
-
-    let stageIndex = 0;
-    let timeIndex = 0;
-    const totalTimes = stages.reduce((sum, s)=>sum + s.times, 0);
-
-    // 初始化录音
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    mediaRecorder = new MediaRecorder(stream);
-    audioChunks = [];
-    mediaRecorder.ondataavailable = (e)=>audioChunks.push(e.data);
-
-    // 递归播放+录音
-    async function playNext(){
-      if(stageIndex >= stages.length){
-        // 跟读完成：合并录音并播放
-        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-        const audioUrl = URL.createObjectURL(audioBlob);
-        const audio = new Audio(audioUrl);
-        statusBox.textContent = txt.shadowComplete;
-        // 添加播放按钮
-        statusBox.innerHTML += `<br><button onclick="audio.play()" class="mt-2 p-2 bg-blue-600 text-white rounded-lg text-sm">${txt.playRecord}</button>`;
-        mediaRecorder.stop();
-        stream.getTracks().forEach(track=>track.stop());
-        return;
-      }
-
-      const stage = stages[stageIndex];
-      // 更新当前状态（仅显示当前阶段）
-      statusBox.textContent = stage.label.replace("{current}", timeIndex+1).replace("{total}", stage.times);
-
-      // 1. 播放原音
-      const utter = new SpeechSynthesisUtterance(sentence);
-      utter.lang = currentLang;
-      utter.rate = stage.rate;
-      speechSynthesis.speak(utter);
-
-      // 2. 原音播放完，开始录用户跟读（3秒间隔）
-      await new Promise(resolve=>setTimeout(resolve, 1500));
-      mediaRecorder.start();
-      await new Promise(resolve=>setTimeout(resolve, 2000)); // 2秒录音时间
-      mediaRecorder.stop();
-
-      // 3. 等待间隔，进入下一次
-      await new Promise(resolve=>setTimeout(resolve, stage.interval - 3500));
-
-      timeIndex++;
-      // 阶段完成，进入下一个
-      if(timeIndex >= stage.times){
-        stageIndex++;
-        timeIndex = 0;
-      }
-
-      // 继续下一次
-      playNext();
-    }
-
-    playNext();
+  // 播放原音并返回时长
+  function speakAndGetDur(text, rate=1){
+    return new Promise(resolve=>{
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = currentLang; u.rate = rate;
+      const start = Date.now();
+      u.onend = ()=>resolve(Date.now()-start);
+      speechSynthesis.speak(u);
+    })
   }
 
-  // ======================================
-  // ✅ 修复3：全新情景挑战（间隔+动态提示+无堆内容）
-  // ======================================
-  async function startSceneChallenge(sentence){
-    clearInterval(shadowTimer);
-    const statusBox = document.getElementById("currentStatus");
-    statusBox.className = "status-box challenge-status";
-    statusBox.classList.remove("hidden");
-    document.getElementById("result").innerHTML = "";
+  // 初始化影子跟读（显示播放按钮）
+  function initShadow(){
+    if(!currentTrans)return;
+    shadowStepIndex = 0;
+    const st = document.getElementById("currentStatus");
+    const playArea = document.getElementById("shadowPlayArea");
+    st.className = "status-box shadow-status"; st.classList.remove("hidden");
+    playArea.classList.remove("hidden");
+    showShadowStep();
+  }
 
-    const words = sentence.split(/\s+/);
-    // 3轮渐进挑战（带间隔+动态提示）
-    const rounds = [
-      { 
-        rate: 0.6, 
-        subtitle: sentence, 
-        label: txt.challengeStage1,
-        interval: 4000
-      },
-      { 
-        rate: 0.8, 
-        subtitle: words.map(w => w[0] + "▯".repeat(Math.max(w.length-2, 0)) + (w[w.length-1] || "")).join(" "), 
-        label: txt.challengeStage2,
-        interval: 4000
-      },
-      { 
-        rate: 1.0, 
-        subtitle: "", 
-        label: txt.challengeStage3,
-        interval: 4000
-      }
+  // 显示当前跟读步骤+播放按钮
+  function showShadowStep(){
+    if(shadowStepIndex >= shadowPlan.length){
+      document.getElementById("currentStatus").textContent = txt.done;
+      document.getElementById("shadowPlayArea").innerHTML = "";
+      return;
+    }
+    const step = shadowPlan[shadowStepIndex];
+    document.getElementById("currentStatus").textContent = txt.shadowStep.replace("{n}",shadowStepIndex+1).replace("{rate}",step.rate);
+    document.getElementById("shadowPlayArea").innerHTML = `<button class="play-btn" onclick="playShadowStep()">${txt.play}</button>`;
+  }
+
+  // 播放当前跟读步骤（原音+等待时长+3秒，无额外时间）
+  async function playShadowStep(){
+    const step = shadowPlan[shadowStepIndex];
+    const dur = await speakAndGetDur(currentTrans, step.rate);
+    await new Promise(r=>setTimeout(r, dur + 3000));
+    shadowStepIndex++;
+    showShadowStep();
+  }
+
+  // 情景挑战（2×0.8 + 2×1.0 + 1×美观空缺，仅原音时长+3秒）
+  async function startChallenge(){
+    if(!currentTrans)return;
+    const st = document.getElementById("currentStatus");
+    st.className = "status-box challenge-status"; st.classList.remove("hidden");
+    const words = currentTrans.split(/\s+/);
+
+    const steps = [
+      {rate:0.8, text:currentTrans, label:txt.challenge1, times:2},
+      {rate:1.0, text:currentTrans, label:txt.challenge2, times:2},
+      {rate:1.0, text:prettyMaskWords(words), label:txt.challenge3, times:1}
     ];
 
-    // 逐轮执行（仅显示当前轮次）
-    for(let i=0; i<rounds.length; i++){
-      const round = rounds[i];
-      // 更新当前轮次提示（仅显示当前）
-      statusBox.textContent = round.label;
-      // 显示当前轮次字幕
-      document.getElementById("result").innerHTML = `
-        <div class="border p-6 rounded-xl bg-white">
-          <p class="text-xl text-blue-600">${round.subtitle}</p>
-        </div>
-      `;
-
-      // 播放原音
-      const utter = new SpeechSynthesisUtterance(sentence);
-      utter.lang = currentLang;
-      utter.rate = round.rate;
-      speechSynthesis.speak(utter);
-
-      // 等待间隔（给用户跟读时间）
-      await new Promise(resolve => setTimeout(resolve, round.interval));
+    for(let s of steps){
+      for(let i=0;i<s.times;i++){
+        st.textContent = s.label;
+        document.getElementById("result").innerHTML = `<div class="border p-6 rounded-xl bg-white"><p class="text-xl">${s.text}</p></div>`;
+        const dur = await speakAndGetDur(s.text, s.rate);
+        await new Promise(r=>setTimeout(r, dur + 3000));
+      }
     }
 
-    // 挑战完成
-    statusBox.textContent = txt.challengeComplete;
+    st.textContent = txt.done;
     document.getElementById("result").innerHTML = "";
   }
 
-  // ======================================
-  // 基础发音功能
-  // ======================================
-  function speak(text){
-    speechSynthesis.cancel();
-    const utter = new SpeechSynthesisUtterance(text);
-    utter.lang = currentLang;
-    speechSynthesis.speak(utter);
+  // 美观单词空缺
+  function prettyMaskWords(words){
+    return words.map(w=>{
+      if(w.length <= 2) return w;
+      return w[0] + '_'.repeat(w.length-2) + (w[w.length-1]||'');
+    }).join(" ");
   }
 
-  // ======================================
-  // 单词点选功能
-  // ======================================
+  // 普通播放
+  function speak(t){
+    const u = new SpeechSynthesisUtterance(t);u.lang=currentLang;speechSynthesis.speak(u);
+  }
+
+  // 单词点选
   function makeWordsClickable(){
-    const p = document.getElementById("transSentence");
-    const words = p.innerText.split(/\s+/);
-    p.innerHTML = words.map(w => `<span class="clickable-word" onclick="addWord(this)">${w}</span>`).join(" ");
+    const p=document.getElementById("transSentence");
+    p.innerHTML=p.innerText.split(/\s+/).map(w=>`<span class="clickable-word" onclick="addWord(this)">${w}</span>`).join(" ");
   }
   function addWord(el){
-    const word = el.innerText.replace(/[.,!?]/g, "");
-    if(!vocab.includes(word)){
-      vocab.push(word);
-      localStorage.setItem("slVocab", JSON.stringify(vocab));
-      renderVocab();
-      alert(sysLang==='zh'?`已添加单词: ${word}`:`Added word: ${word}`);
-    }
+    const w=el.innerText.replace(/[.,!?]/g,"");
+    if(!vocab.includes(w)){vocab.push(w);localStorage.setItem("slVocab",JSON.stringify(vocab));renderVocab();}
   }
 
-  // ======================================
-  // 单词本功能
-  // ======================================
+  // 单词本
   function importWords(){document.getElementById("vocabArea").classList.toggle("hidden")}
   function saveImport(){
-    const words = document.getElementById("importInput").value.split("\n").filter(x=>x.trim());
-    vocab = [...new Set([...vocab, ...words])];
-    localStorage.setItem("slVocab", JSON.stringify(vocab));
+    const ws=document.getElementById("importInput").value.split("\n").filter(x=>x);
+    vocab=[...new Set([...vocab,...ws])];
+    localStorage.setItem("slVocab",JSON.stringify(vocab));
     renderVocab();
-    document.getElementById("vocabArea").classList.add("hidden");
   }
-  function reviewWords(){
-    const word = vocab[Math.floor(Math.random()*vocab.length)];
-    word && alert(`Review: ${word}`);
-  }
-  function dictationTest(){
-    const word = vocab[Math.floor(Math.random()*vocab.length)];
-    if(!word) return;
-    speak(word);
-    const input = prompt("Dictation:");
-    input && alert(input.toLowerCase()===word.toLowerCase()?"Correct":"Wrong: "+word);
-  }
+  function reviewWords(){const w=vocab[Math.floor(Math.random()*vocab.length)];w&&alert(w);}
+  function dictationTest(){const w=vocab[Math.floor(Math.random()*vocab.length)];if(w){speak(w);prompt("Type:")}}
   function renderVocab(){
-    const list = document.getElementById("vocabList");
-    list.innerHTML = vocab.length === 0 ? "<p class='text-gray-500'>No words yet</p>" :
-      vocab.map((w,i) => `
-        <div class="flex justify-between items-center border p-3 rounded-lg">
-          <span class="text-lg">${w}</span>
-          <div class="flex gap-2">
-            <button onclick="speak('${w}')" class="p-1 bg-gray-100 rounded-md text-xs">🔊</button>
-            <button onclick="delWord(${i})" class="p-1 bg-red-100 rounded-md text-xs">🗑️</button>
-          </div>
+    document.getElementById("vocabList").innerHTML=vocab.map((w,i)=>`
+      <div class="flex justify-between border p-3 rounded-lg">
+        <span>${w}</span>
+        <div class="flex gap-2">
+          <button onclick="speak('${w}')" class="p-1 bg-gray-100 rounded-xs">🔊</button>
+          <button onclick="vocab.splice(${i},1);renderVocab();localStorage.setItem('slVocab',JSON.stringify(vocab))" class="p-1 bg-red-100 rounded-xs">🗑️</button>
         </div>
-      `).join("");
-  }
-  function delWord(index){
-    vocab.splice(index,1);
-    localStorage.setItem("slVocab", JSON.stringify(vocab));
-    renderVocab();
-  }
-
-  // ======================================
-  // 学习历史功能
-  // ======================================
-  function saveHistory(text, trans){
-    history.unshift({text, trans, lang: currentLang, time: new Date().toLocaleString()});
-    localStorage.setItem("slHistory", JSON.stringify(history));
-    renderHistory();
-  }
-  function renderHistory(){
-    const list = document.getElementById("historyList");
-    list.innerHTML = history.map(h => `
-      <div class="border p-3 rounded-lg">
-        <p class="text-sm text-gray-500">${h.time}</p>
-        <p class="text-sm">${h.text}</p>
-        <p class="text-blue-600 text-lg mt-1">${h.trans}</p>
-        <button onclick="speak('${h.trans}')" class="text-xs p-1 bg-gray-100 rounded-md mt-1">${txt.read}</button>
       </div>
-    `).join("");
+    `).join("")||"<p class='text-gray-500'>No words</p>";
   }
 
-  // ======================================
-  // TikTok每日句子功能
-  // ======================================
-  function loadDailyQuote(){
-    const quotes = [
-      "Practice makes perfect.",
-      "Never too old to learn.",
-      "Keep going, you're doing great!",
-      "Every day is a new chance to learn."
-    ];
-    document.getElementById("dailyQuote").innerText = quotes[Math.floor(Math.random()*quotes.length)];
-  }
-  function saveCard(){
-    alert(sysLang==='zh'?"图片已保存":"Image saved!");
-  }
+  function saveCard(){alert("Saved!")}
 </script>
 </body>
 </html>
