@@ -18,8 +18,8 @@
     .recording {background:#fef2f2;border-left:4px solid #ef4444;color:#dc2626}
     .shadow-status {background:#eff6ff;border-left:4px solid #3b82f6;color:#1e40af}
     .challenge-status {background:#faf5ff;border-left:4px solid #8b5cf6;color:#6d28d9}
-    .word-blur {color:#6b7280;font-weight:600}
-    .play-btn{@apply px-4 py-2 bg-blue-600 text-white rounded-lg mt-2}
+    .play-btn{padding:8px 16px;background:#3b82f6;color:white;border-radius:8px;margin-top:8px;border:none;cursor:pointer}
+    .word-gap{color:#6b7280;font-weight:600}
   </style>
 </head>
 <body class="p-4 bg-gray-50 max-w-2xl mx-auto">
@@ -116,7 +116,7 @@
       import:"Import",review:"Review",dictate:"Dictation",save:"Save",
       voiceStart:"Start Voice",voiceStop:"Stop Voice",recording:"🎤 Recording, tap stop to end",
       shadowStep:"Shadow {n}/10 · {rate}x",play:"Play Original",
-      challenge1:"0.8x × 2 times",challenge2:"1.0x × 2 times",challenge3:"1.0x · Word Blur",
+      challenge1:"0.8x × 2 times",challenge2:"1.0x × 2 times",challenge3:"1.0x · Word Gap",
       done:"Done!"
     }
   };
@@ -132,11 +132,10 @@
 
   let currentTrans = "", currentLang = "en";
   let vocab = JSON.parse(localStorage.getItem("slVocab"))||[];
-  let history = JSON.parse(localStorage.getItem("slHistory"))||[];
   let voiceRecognition, isRecording = false;
   let shadowStepIndex = 0;
 
-  // 跟读10遍固定倍速顺序（严格按要求）
+  // 跟读10遍固定倍速顺序
   const shadowPlan = [
     {rate:0.6},{rate:0.6},
     {rate:0.8},{rate:0.8},
@@ -171,7 +170,7 @@
     event.target.classList.add("active");
   }
 
-  // 语音输入：手动启停
+  // 语音输入手动启停
   function startVoiceRecord(){
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if(!SpeechRecognition){alert("Not supported");return}
@@ -181,14 +180,12 @@
     voiceRecognition.lang = "zh-CN";
     voiceRecognition.continuous = true;
     voiceRecognition.interimResults = false;
-
     document.getElementById("voiceStatus").classList.remove("hidden");
     isRecording = true;
     window.voiceText = "";
     voiceRecognition.onresult = e=>{window.voiceText += e.results[0][0].transcript + " "};
     voiceRecognition.start();
   }
-
   function stopVoiceRecord(){
     if(!isRecording || !voiceRecognition)return;
     voiceRecognition.stop();
@@ -206,12 +203,13 @@
         method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({text:t,lang:currentLang})
       });
-      const d = await r.json(); currentTrans = d.translated;
+      const d = await r.json(); 
+      currentTrans = d.translated;
       document.getElementById("result").innerHTML=`
         <div class="border p-6 rounded-xl bg-white">
           <p id="transSentence" class="text-xl text-blue-600 mb-4">${d.translated}</p>
           <div class="flex gap-3 flex-wrap">
-            <button onclick="speak('${d.translated}')" class="p-3 bg-gray-100 rounded-lg">${txt.read}</button>
+            <button onclick="speakText('${d.translated}')" class="p-3 bg-gray-100 rounded-lg">${txt.read}</button>
             <button onclick="initShadow()" class="p-3 bg-blue-100 rounded-lg">${txt.shadow}</button>
             <button onclick="startChallenge()" class="p-3 bg-purple-100 rounded-lg">${txt.challenge}</button>
           </div>
@@ -221,18 +219,28 @@
     document.getElementById("load").style.display="none";
   }
 
-  // 播放原音并返回时长
-  function speakAndGetDur(text, rate=1){
+  // ======================================
+  // 修复1：统一语音播放函数，全部有声音
+  // ======================================
+  function speakText(text){
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = currentLang;
+    window.speechSynthesis.speak(u);
+  }
+  async function speakAndGetDur(text, rate=1){
     return new Promise(resolve=>{
+      window.speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text);
-      u.lang = currentLang; u.rate = rate;
+      u.lang = currentLang; 
+      u.rate = rate;
       const start = Date.now();
       u.onend = ()=>resolve(Date.now()-start);
-      speechSynthesis.speak(u);
+      window.speechSynthesis.speak(u);
     })
   }
 
-  // 初始化影子跟读（显示播放按钮）
+  // 影子跟读初始化+播放按钮
   function initShadow(){
     if(!currentTrans)return;
     shadowStepIndex = 0;
@@ -242,8 +250,6 @@
     playArea.classList.remove("hidden");
     showShadowStep();
   }
-
-  // 显示当前跟读步骤+播放按钮
   function showShadowStep(){
     if(shadowStepIndex >= shadowPlan.length){
       document.getElementById("currentStatus").textContent = txt.done;
@@ -254,8 +260,6 @@
     document.getElementById("currentStatus").textContent = txt.shadowStep.replace("{n}",shadowStepIndex+1).replace("{rate}",step.rate);
     document.getElementById("shadowPlayArea").innerHTML = `<button class="play-btn" onclick="playShadowStep()">${txt.play}</button>`;
   }
-
-  // 播放当前跟读步骤（原音+等待时长+3秒，无额外时间）
   async function playShadowStep(){
     const step = shadowPlan[shadowStepIndex];
     const dur = await speakAndGetDur(currentTrans, step.rate);
@@ -264,7 +268,9 @@
     showShadowStep();
   }
 
-  // 情景挑战（2×0.8 + 2×1.0 + 1×美观空缺，仅原音时长+3秒）
+  // ======================================
+  // 修复2：情景挑战最后一轮空缺完整单词，非字母
+  // ======================================
   async function startChallenge(){
     if(!currentTrans)return;
     const st = document.getElementById("currentStatus");
@@ -274,7 +280,7 @@
     const steps = [
       {rate:0.8, text:currentTrans, label:txt.challenge1, times:2},
       {rate:1.0, text:currentTrans, label:txt.challenge2, times:2},
-      {rate:1.0, text:prettyMaskWords(words), label:txt.challenge3, times:1}
+      {rate:1.0, text:maskFullWords(words), label:txt.challenge3, times:1}
     ];
 
     for(let s of steps){
@@ -285,22 +291,16 @@
         await new Promise(r=>setTimeout(r, dur + 3000));
       }
     }
-
     st.textContent = txt.done;
     document.getElementById("result").innerHTML = "";
   }
 
-  // 美观单词空缺
-  function prettyMaskWords(words){
-    return words.map(w=>{
-      if(w.length <= 2) return w;
-      return w[0] + '_'.repeat(w.length-2) + (w[w.length-1]||'');
+  // 空缺完整单词，而非字母
+  function maskFullWords(words){
+    return words.map((word, idx) => {
+      if(idx % 2 === 0) return word;
+      return `<span class="word-gap">____</span>`;
     }).join(" ");
-  }
-
-  // 普通播放
-  function speak(t){
-    const u = new SpeechSynthesisUtterance(t);u.lang=currentLang;speechSynthesis.speak(u);
   }
 
   // 单词点选
@@ -322,13 +322,13 @@
     renderVocab();
   }
   function reviewWords(){const w=vocab[Math.floor(Math.random()*vocab.length)];w&&alert(w);}
-  function dictationTest(){const w=vocab[Math.floor(Math.random()*vocab.length)];if(w){speak(w);prompt("Type:")}}
+  function dictationTest(){const w=vocab[Math.floor(Math.random()*vocab.length)];if(w){speakText(w);prompt("Type:")}}
   function renderVocab(){
     document.getElementById("vocabList").innerHTML=vocab.map((w,i)=>`
       <div class="flex justify-between border p-3 rounded-lg">
         <span>${w}</span>
         <div class="flex gap-2">
-          <button onclick="speak('${w}')" class="p-1 bg-gray-100 rounded-xs">🔊</button>
+          <button onclick="speakText('${w}')" class="p-1 bg-gray-100 rounded-xs">🔊</button>
           <button onclick="vocab.splice(${i},1);renderVocab();localStorage.setItem('slVocab',JSON.stringify(vocab))" class="p-1 bg-red-100 rounded-xs">🗑️</button>
         </div>
       </div>
