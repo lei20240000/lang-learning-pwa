@@ -6,13 +6,10 @@
   <title>StreamLang</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    .loading{display:none;position:fixed;inset:0;background:rgba(255,255,255,0.9);display:flex;align-items:center;justify-content:center;z-index:999}
-    .spin{width:40px;height:40px;border:4px solid #eee;border-top:4px solid #3b82f6;border-radius:50%;animation:spin 1s linear infinite}
-    @keyframes spin{100%{transform:rotate(360deg)}}
+    .loading{ display:none !important; }
+    .page{ display:block; }
     .clickable-word{cursor:pointer;color:#3b82f6;font-weight:500}
     .clickable-word:hover{text-decoration:underline}
-    .page{display:none}
-    .page.active{display:block}
     .nav-btn.active{font-weight:bold;color:#3b82f6;border-bottom:2px solid #3b82f6}
     .status-box{padding:12px 16px;border-radius:10px;margin-bottom:12px;font-weight:600}
     .shadow-status{background:#eff6ff;border-left:4px solid #3b82f6;color:#1e40af}
@@ -21,82 +18,81 @@
 </head>
 
 <body class="p-4 bg-gray-50 max-w-2xl mx-auto">
-<div class="loading" id="load"><div class="spin"></div></div>
 
-<div class="flex justify-between items-center mb-4">
-  <h1 class="text-3xl font-bold text-blue-600">StreamLang</h1>
-  <div class="flex gap-2">
-    <select id="sourceLang" class="p-2 border rounded-md text-sm bg-white"></select>
-    <select id="targetLang" class="p-2 border rounded-md text-sm bg-white"></select>
-  </div>
-</div>
-
-<div class="grid grid-cols-5 gap-1 text-lg mb-4 border-b pb-2">
-  <button class="nav-btn active py-1" onclick="switchPage('home')">Home</button>
-  <button class="nav-btn py-1" onclick="switchPage('vocab')">Vocab</button>
-  <button class="nav-btn py-1" onclick="switchPage('history')">History</button>
-  <button class="nav-btn py-1" onclick="switchPage('member')">Pro</button>
-  <button class="nav-btn py-1" onclick="switchPage('tiktok')">TikTok</button>
-</div>
-
-<div id="home" class="page active">
-  <textarea id="text" rows="5" class="w-full p-4 border rounded-xl mb-4 text-xl" placeholder="Enter text..."></textarea>
-  <button onclick="processText()" class="w-full p-4 bg-blue-600 text-white rounded-xl text-xl font-medium mb-6">Translate</button>
-  <div id="currentStatus" class="status-box hidden"></div>
-  <div id="result" class="space-y-4"></div>
-</div>
-
-<div id="vocab" class="page">
-  <h3 class="text-xl font-bold mb-3">My Vocabulary</h3>
-  <div class="flex gap-2 mb-3">
-    <button onclick="importWords()" class="flex-1 p-2 bg-blue-100 rounded-md">Import</button>
-    <button onclick="reviewWords()" class="flex-1 p-2 bg-green-100 rounded-md">Review</button>
-    <button onclick="dictationTest()" class="flex-1 p-2 bg-purple-100 rounded-md">Dictation</button>
-  </div>
-  <div id="vocabArea" class="hidden mb-3">
-    <textarea id="importInput" rows="3" class="w-full p-2 border rounded-lg" placeholder="Paste words..."></textarea>
-    <button onclick="saveImport()" class="mt-1 w-full p-2 bg-blue-600 text-white rounded-lg">Save</button>
-  </div>
-  <div id="vocabList" class="space-y-2 max-h-[400px] overflow-y-auto"></div>
-</div>
-
-<div id="history" class="page">
-  <h3 class="text-xl font-bold mb-3">Study History</h3>
-  <div id="historyList" class="space-y-2 max-h-[500px] overflow-y-auto"></div>
-</div>
-
-<div id="member" class="page">
-  <div class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 rounded-2xl mb-6 text-center shadow-lg">
-    <h2 class="text-3xl font-bold">StreamLang Pro</h2>
-    <p class="opacity-90">Unlock all features</p>
-  </div>
-  <div class="grid gap-4 mb-6">
-    <div class="bg-white border rounded-2xl p-5 shadow-sm">
-      <div class="font-bold text-lg">Quarterly</div>
-      <div class="text-blue-700 text-xl font-bold my-2">$4.99</div>
-      <a href="https://lemon-squeezy.com/" target="_blank" class="block w-full py-2 bg-blue-600 text-white rounded-xl text-center">Subscribe</a>
-    </div>
-    <div class="bg-white border rounded-2xl p-5 shadow-sm">
-      <div class="font-bold text-lg">Yearly</div>
-      <div class="text-blue-700 text-xl font-bold my-2">$14.99</div>
-      <a href="https://lemon-squeezy.com/" target="_blank" class="block w-full py-2 bg-blue-600 text-white rounded-xl text-center">Subscribe</a>
-    </div>
-    <div class="bg-white border border-purple-400 rounded-2xl p-5 shadow-sm">
-      <div class="font-bold text-lg">Lifetime</div>
-      <div class="text-purple-700 text-xl font-bold my-2">$29.99</div>
-      <a href="https://lemon-squeezy.com/" target="_blank" class="block w-full py-2 bg-purple-600 text-white rounded-xl text-center">Get Lifetime</a>
+  <div class="flex justify-between items-center mb-4">
+    <h1 class="text-3xl font-bold text-blue-600">StreamLang</h1>
+    <div class="flex gap-2">
+      <select id="sourceLang" class="p-2 border rounded-md text-sm bg-white"></select>
+      <select id="targetLang" class="p-2 border rounded-md text-sm bg-white"></select>
     </div>
   </div>
-  <div class="text-center text-gray-500 text-sm pt-4 border-t">Support: lei20240000@gmail.com</div>
-</div>
 
-<div id="tiktok" class="page text-center">
-  <div class="bg-gradient-to-r from-blue-500 to-purple-500 text-white p-8 rounded-2xl mb-4">
-    <p id="dailyQuote" class="text-2xl">Daily Sentence</p>
+  <div class="grid grid-cols-5 gap-1 text-lg mb-4 border-b pb-2">
+    <button class="nav-btn active py-1" onclick="switchPage('home')">Home</button>
+    <button class="nav-btn py-1" onclick="switchPage('vocab')">Vocab</button>
+    <button class="nav-btn py-1" onclick="switchPage('history')">History</button>
+    <button class="nav-btn py-1" onclick="switchPage('member')">Pro</button>
+    <button class="nav-btn py-1" onclick="switchPage('tiktok')">TikTok</button>
   </div>
-  <button onclick="alert('Saved')" class="w-full p-3 bg-blue-600 text-white rounded-xl mb-2">Save Image</button>
-  <a href="https://tiktok.com" target="_blank" class="block w-full p-3 bg-black text-white rounded-xl">Post to TikTok</a>
-</div>
+
+  <div id="home">
+    <textarea id="text" rows="5" class="w-full p-4 border rounded-xl mb-4 text-xl" placeholder="Enter text..."></textarea>
+    <button onclick="processText()" class="w-full p-4 bg-blue-600 text-white rounded-xl text-xl font-medium mb-6">Translate</button>
+    <div id="currentStatus" class="status-box hidden"></div>
+    <div id="result" class="space-y-4"></div>
+  </div>
+
+  <div id="vocab" class="hidden">
+    <h3 class="text-xl font-bold mb-3">My Vocabulary</h3>
+    <div class="flex gap-2 mb-3">
+      <button onclick="importWords()" class="flex-1 p-2 bg-blue-100 rounded-md">Import</button>
+      <button onclick="reviewWords()" class="flex-1 p-2 bg-green-100 rounded-md">Review</button>
+      <button onclick="dictationTest()" class="flex-1 p-2 bg-purple-100 rounded-md">Dictation</button>
+    </div>
+    <div id="vocabArea" class="hidden mb-3">
+      <textarea id="importInput" rows="3" class="w-full p-2 border rounded-lg" placeholder="Paste words..."></textarea>
+      <button onclick="saveImport()" class="mt-1 w-full p-2 bg-blue-600 text-white rounded-lg">Save</button>
+    </div>
+    <div id="vocabList" class="space-y-2 max-h-[400px] overflow-y-auto"></div>
+  </div>
+
+  <div id="history" class="hidden">
+    <h3 class="text-xl font-bold mb-3">Study History</h3>
+    <div id="historyList" class="space-y-2 max-h-[500px] overflow-y-auto"></div>
+  </div>
+
+  <div id="member" class="hidden">
+    <div class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 rounded-2xl mb-6 text-center shadow-lg">
+      <h2 class="text-3xl font-bold">StreamLang Pro</h2>
+      <p class="opacity-90">Unlock all features</p>
+    </div>
+    <div class="grid gap-4 mb-6">
+      <div class="bg-white border rounded-2xl p-5 shadow-sm">
+        <div class="font-bold text-lg">Quarterly</div>
+        <div class="text-blue-700 text-xl font-bold my-2">$4.99</div>
+        <a href="https://lemon-squeezy.com/" target="_blank" class="block w-full py-2 bg-blue-600 text-white rounded-xl text-center">Subscribe</a>
+      </div>
+      <div class="bg-white border rounded-2xl p-5 shadow-sm">
+        <div class="font-bold text-lg">Yearly</div>
+        <div class="text-blue-700 text-xl font-bold my-2">$14.99</div>
+        <a href="https://lemon-squeezy.com/" target="_blank" class="block w-full py-2 bg-blue-600 text-white rounded-xl text-center">Subscribe</a>
+      </div>
+      <div class="bg-white border border-purple-400 rounded-2xl p-5 shadow-sm">
+        <div class="font-bold text-lg">Lifetime</div>
+        <div class="text-purple-700 text-xl font-bold my-2">$29.99</div>
+        <a href="https://lemon-squeezy.com/" target="_blank" class="block w-full py-2 bg-purple-600 text-white rounded-xl text-center">Get Lifetime</a>
+      </div>
+    </div>
+    <div class="text-center text-gray-500 text-sm pt-4 border-t">Support: lei20240000@gmail.com</div>
+  </div>
+
+  <div id="tiktok" class="hidden text-center">
+    <div class="bg-gradient-to-r from-blue-500 to-purple-500 text-white p-8 rounded-2xl mb-4">
+      <p id="dailyQuote" class="text-2xl">Daily Sentence</p>
+    </div>
+    <button onclick="alert('Saved')" class="w-full p-3 bg-blue-600 text-white rounded-xl mb-2">Save Image</button>
+    <a href="https://tiktok.com" target="_blank" class="block w-full p-3 bg-black text-white rounded-xl">Post to TikTok</a>
+  </div>
 
 <script>
   const READ_INTERVAL = 2000;
@@ -144,16 +140,17 @@
   };
 
   function switchPage(id) {
-    document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
-    document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
-    document.getElementById(id).classList.add("active");
-    event.target.classList.add("active");
+    document.getElementById('home').classList.add('hidden');
+    document.getElementById('vocab').classList.add('hidden');
+    document.getElementById('history').classList.add('hidden');
+    document.getElementById('member').classList.add('hidden');
+    document.getElementById('tiktok').classList.add('hidden');
+    document.getElementById(id).classList.remove('hidden');
   }
 
   async function processText() {
     const text = document.getElementById("text").value.trim();
     if (!text) return;
-    document.getElementById("load").style.display = "flex";
     try {
       const res = await fetch("/api/ai-process", {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -175,7 +172,6 @@
     } catch (e) {
       alert("Translation error");
     }
-    document.getElementById("load").style.display = "none";
   }
 
   function speak(text, rate = 1) {
