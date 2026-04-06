@@ -22,7 +22,7 @@
       </div>
     </div>
 
-    <button onclick="login()" class="w-full py-3 bg-blue-60 text-white rounded-xl text-lg font-medium bg-blue-600">Sign In</button>
+    <button onclick="login()" class="w-full py-3 bg-blue-600 text-white rounded-xl text-lg font-medium">Sign In</button>
   </div>
 
   <script>
@@ -35,7 +35,8 @@
       const email = document.getElementById('email').value;
       const pwd = document.getElementById('password').value;
       if (email && pwd) {
-        window.location.href = "/pages/index.html";
+        // ✅ 修复 Vercel 404 跳转
+        window.location.href = "/";
       } else {
         alert('Please enter email & password');
       }
